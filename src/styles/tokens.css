@@ -1,0 +1,77 @@
+/* Anchor design tokens — pulled from the Figma hi-fi prototype.
+   Nami owns this file. Ask before editing. */
+
+:root {
+  /* Surfaces */
+  --page: #F1EEE4;         /* app background */
+  --card: #FAF7EF;         /* standard card */
+  --card-alt: #E2E8D6;     /* sage highlight card (greeting) */
+  --pill: #E9E5D8;         /* first-step pill, chips */
+  --tabbar: #FBF9F3;
+
+  /* Ink */
+  --ink: #2C3122;          /* primary text */
+  --ink-soft: #83836F;     /* secondary text */
+  --ink-eyebrow: #67724F;  /* small caps labels */
+
+  /* Accent */
+  --green: #44512E;        /* primary buttons, active state */
+  --green-ink: #F5F2E8;    /* text on green */
+  --line: #E0DCCE;         /* hairline borders */
+
+  /* Type */
+  --display: 'Fraunces', Georgia, serif;
+  --body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --fs-greeting: 30px;
+  --fs-h2: 20px;
+  --fs-title: 16px;
+  --fs-body: 14px;
+  --fs-small: 13px;
+  --fs-label: 10.5px;
+
+  /* Space + shape */
+  --gap: 16px;
+  --pad: 20px;
+  --r-card: 16px;
+  --r-card-lg: 22px;
+  --r-btn: 10px;
+
+  --tabbar-h: 74px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--display);
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

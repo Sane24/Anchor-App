@@ -1,0 +1,147 @@
+/* App shell, header, tab bar, and shared card styles. */
+
+.app {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--page);
+}
+
+/* ---------- Header ---------- */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px var(--pad) 6px;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-name {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.1;
+}
+
+.header-tagline {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.header-action {
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--green);
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- Screen body ---------- */
+
+.screen {
+  flex: 1;
+  padding: 10px var(--pad) calc(var(--tabbar-h) + 24px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.screen-title {
+  font-size: var(--fs-h2);
+  padding-top: 4px;
+}
+
+.eyebrow {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-eyebrow);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 16px;
+}
+
+.card-sage {
+  background: var(--card-alt);
+  border: none;
+  border-radius: var(--r-card-lg);
+  padding: 22px;
+}
+
+/* Placeholder shown until a screen is built. Delete when you build yours. */
+.placeholder {
+  border: 1px dashed var(--line);
+  border-radius: var(--r-card);
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--ink-soft);
+  background: transparent;
+}
+
+.placeholder strong {
+  display: block;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: var(--fs-title);
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.placeholder .owner {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 12px;
+  background: var(--pill);
+  border-radius: 20px;
+  padding: 3px 10px;
+  color: var(--ink-eyebrow);
+}
+
+/* ---------- Tab bar ---------- */
+
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 430px;
+  margin: 0 auto;
+  height: var(--tabbar-h);
+  display: flex;
+  align-items: center;
+  background: var(--tabbar);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 2px;
+  text-decoration: none;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tab.active {
+  color: var(--green);
+  font-weight: 600;
+}

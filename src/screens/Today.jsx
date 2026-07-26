@@ -1,0 +1,20 @@
+import Placeholder from '../components/Placeholder'
+
+export default function Today() {
+  return (
+    <div className="screen">
+      <div className="card-sage">
+        <div className="eyebrow">Monday, July 27</div>
+        <h1 style={{ fontSize: 'var(--fs-greeting)', margin: '6px 0' }}>Good morning.</h1>
+        <p style={{ margin: 0, color: 'var(--ink-soft)' }}>
+          Nothing planned yet. Start a morning briefing to pick your three.
+        </p>
+      </div>
+
+      <Placeholder
+        title="Today's anchors"
+        note="Three checkable anchors, each with a first step, plus Things due today and On the calendar."
+      />
+    </div>
+  )
+}
