@@ -49,7 +49,7 @@ src/
 
 Work only in your own files. If you need a change in a shared file, ask its owner.
 
-| Area | Files | Owner |
+| Area | Files 
 |---|---|---|
 | Today screen + check-off + tab bar | `screens/Today.jsx`, `components/TabBar.jsx` 
 | Design tokens | `styles/tokens.css`, `styles/app.css` 
