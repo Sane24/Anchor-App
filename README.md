@@ -39,7 +39,7 @@ src/
     Reflection.jsx      TAB 4
     Settings.jsx        TAB 5
     Briefing.jsx        opened from Today, not a tab
-    Timer.jsx           opened from an anchor, not a tab
+    Timer.jsx           opened from an anchor, not a tab, maybe can make a tab replace settings
   styles/
     tokens.css          colors, fonts, logo, spacing — from the Figma
     app.css             app shell, header, tab bar, cards
@@ -73,22 +73,17 @@ Use the existing classes so everything stays consistent:
 Colors and fonts come from CSS variables in `tokens.css` — use
 `var(--green)`, `var(--ink-soft)`, etc. Don't hardcode hex values.
 
-## Team rules
 
-1. Work only in your own files. Shared files (`tokens.css`, `store.js`) are single-owned.
-2. Stuck for 30 minutes? Message the group.
-3. Short standup daily. "Done" means demoable, per the plan's done-when column.
-
-## Working together (git)
+## Working together rules (git)
 
 1. **Pull before you start.** `git pull` — every single time you sit down.
 2. **Pull again before you push.** Someone probably pushed while you worked.
 3. **Push when you finish a chunk**, not once at the end of the day.
 
 ```bash
-git pull                                  # before you start
+git pull # before you start
 # ...do your work...
-git pull                                  # again, right before pushing
+git pull # again, right before pushing
 git add .
 git commit -m "Add first-step suggestions to briefing"
 git push
