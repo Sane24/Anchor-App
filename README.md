@@ -6,7 +6,7 @@ CS160 Summer 2026 final project.
 
 ## Run it
 
-You need Node 18+ installed.
+Need Node 18+ installed.
 
 ```bash
 npm install
@@ -54,7 +54,7 @@ Work only in your own files. If you need a change in a shared file, ask its owne
 | Today screen + check-off + tab bar | `screens/Today.jsx`, `components/TabBar.jsx` 
 | Design tokens | `styles/tokens.css`, `styles/app.css` 
 | Morning briefing + connections | `screens/Briefing.jsx`, `screens/Settings.jsx` 
-| Fake Gmail / Calendar / Slack data | `src/data/` (to be added) 
+| Gmail / Calendar data | `src/data/` (to be added) 
 | Reflection + rollover | `screens/Reflection.jsx` 
 | Save/load code + focus timer + 1st step suggestion | `src/store.js` (to be added), `screens/Timer.jsx` 
 | This Week  | `screens/ThisWeek.jsx`, 
