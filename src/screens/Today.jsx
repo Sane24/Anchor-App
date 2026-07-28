@@ -22,7 +22,11 @@ export default function Today() {
           <span className="task-step-pill">First step</span>
           <span className="task-step-text">Open Figma and choose a template</span>
         </div>
-        
+        <div className="task-actions">
+          <button className="btn-primary" type="button">Start 5 min</button>
+          <button className="btn-ghost" type="button">I started</button>
+          <button className="btn-ghost" type="button">Tomorrow</button>
+        </div>
       </div>
 
 
