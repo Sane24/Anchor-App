@@ -18,6 +18,7 @@
   --green: #44512E;        /* primary buttons, active state */
   --green-ink: #F5F2E8;    /* text on green */
   --line: #E0DCCE;         /* hairline borders */
+  --line-strong: #B9BCA6;  /* borders on interactive controls, e.g. checkboxes */
 
   /* Type */
   --display: 'Fraunces', Georgia, serif;
@@ -35,10 +36,17 @@
   --pad: 20px;
   --r-card: 16px;
   --r-card-lg: 22px;
+  --r-card-task: 18px;
   --r-btn: 10px;
+  --r-pill: 999px;
 
   --tabbar-h: 74px;
+
+  /* Shadow */
+  --shadow-card: 0 1px 2px rgba(44, 49, 34, 0.05), 0 6px 16px rgba(44, 49, 34, 0.05);
 }
+
+
 
 * { box-sizing: border-box; }
 
