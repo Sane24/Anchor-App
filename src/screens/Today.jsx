@@ -1,3 +1,4 @@
+import { EditIcon, RepeatIcon } from '../components/icons'
 import Placeholder from '../components/Placeholder'
 
 export default function Today() {
@@ -21,14 +22,19 @@ export default function Today() {
         <div className="task-step">
           <span className="task-step-pill">First step</span>
           <span className="task-step-text">Open Figma and choose a template</span>
+          <button className="task-step-edit" type="button" aria-label="Edit first step">
+            <EditIcon size={13} />
+          </button>
         </div>
         <div className="task-actions">
           <button className="btn-primary" type="button">Start 5 min</button>
           <button className="btn-ghost" type="button">I started</button>
-          <button className="btn-ghost" type="button">Tomorrow</button>
+          <button className="btn-ghost" type="button">
+            <RepeatIcon size={12} />
+            Tomorrow
+          </button>
         </div>
       </div>
-
 
       <Placeholder
         title="Today's anchors"
