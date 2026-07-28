@@ -47,6 +47,19 @@ export const SlidersIcon = ({ size = 22 }) => (
   </svg>
 )
 
+export const EditIcon = ({ size = 14 }) => (
+  <svg {...base(size)} aria-hidden="true">
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18 3 19.5 4.5 15 16.5 3.5Z" />
+  </svg>
+)
+
+export const RepeatIcon = ({ size = 12 }) => (
+  <svg {...base(size)} aria-hidden="true">
+    <path d="M3.5 12a8.5 8.5 0 0 1 14.6-5.9M20.5 12a8.5 8.5 0 0 1-14.6 5.9" />
+    <path d="M17.5 2.8v3.6h-3.6M6.5 21.2v-3.6h3.6" />
+  </svg>
+)
+
 // The Anchor logo mark: an anchor inside a ring.
 export const AnchorMark = ({ size = 40 }) => (
   <svg
