@@ -11,6 +11,15 @@ export default function Today() {
         </p>
       </div>
 
+      <div className="card task-card">
+
+        <div className="task-head">
+          <span className="task-num">1</span>
+          <span className="task-title">Design Figma prototype</span>
+          <button className="task-check" type="button" aria-label="Mark landed" />
+        </div>
+      </div>
+
       <Placeholder
         title="Today's anchors"
         note="Three checkable anchors, each with a first step, plus Things due today and On the calendar."
