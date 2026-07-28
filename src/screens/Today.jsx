@@ -11,14 +11,20 @@ export default function Today() {
         </p>
       </div>
 
+      {/* Sample task card — demonstrates the .task-card styles against the Figma design. */}
       <div className="card task-card">
-
         <div className="task-head">
           <span className="task-num">1</span>
           <span className="task-title">Design Figma prototype</span>
           <button className="task-check" type="button" aria-label="Mark landed" />
         </div>
+        <div className="task-step">
+          <span className="task-step-pill">First step</span>
+          <span className="task-step-text">Open Figma and choose a template</span>
+        </div>
+        
       </div>
+
 
       <Placeholder
         title="Today's anchors"
