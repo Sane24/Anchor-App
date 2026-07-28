@@ -73,11 +73,13 @@
   border: 1px solid var(--line);
   border-radius: var(--r-card);
   padding: 16px;
+  box-shadow: var(--shadow-card);
 }
 
 .card-sage {
   background: var(--card-alt);
   border: none;
+  border: 1px solid color-mix(in srgb, var(--green) 14%, transparent);
   border-radius: var(--r-card-lg);
   padding: 22px;
 }
