@@ -148,7 +148,15 @@
   font-weight: 600;
 }
 
+/* ---------- Task card ----------
+   Reusable card variant for a checkable anchor/task, matching the
+   Figma task-card component. Compose as `<div className="card task-card">`. */
 
+.task-card {
+  border-radius: var(--r-card-task);
+  border-color: color-mix(in srgb, var(--ink) 9%, transparent);
+  padding: 15px;
+}
 
 .task-head {
   display: flex;
