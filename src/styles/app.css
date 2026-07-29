@@ -147,6 +147,58 @@
   font-weight: 600;
 }
 
+.card-section-title {
+  font-size: var(--fs-title);
+  margin: 0 0 4px;
+}
+
+.card-section-note {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+}
+
+/* ---------- Theme color picker ----------
+   4 accent presets, used on the Settings screen to override
+   --green / --card-alt at runtime. Each button reads its own accent
+   via the --theme-color custom property (set inline per-option) so
+   the active state doesn't need one rule per theme. */
+
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 78px;
+  padding: 10px 6px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.theme-option-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.theme-option.active {
+  border-color: var(--theme-color);
+  background: color-mix(in srgb, var(--theme-color) 12%, var(--card));
+  color: var(--theme-color);
+}
+
 /* ---------- Task card ----------
    Reusable card variant for a checkable anchor/task, matching the
    Figma task-card component. Compose as `<div className="card task-card">`. */
@@ -167,7 +219,7 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: var(--card--alt);
+  background: var(--card-alt);
   color: var(--green);
   font-family: var(--display);
   font-weight: 600;
