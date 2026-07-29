@@ -10,7 +10,6 @@ import Reflection from './screens/Reflection'
 import Settings from './screens/Settings'
 import Briefing from './screens/Briefing'
 import Timer from './screens/Timer'
-import Auth from './screens/Auth'
 
 export default function App() {
   return (
