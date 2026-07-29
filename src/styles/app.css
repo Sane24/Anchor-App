@@ -312,3 +312,294 @@
   align-items: center;
   gap: 5px;
 }
+
+/* ---------- Focus Sprint screen ----------
+   Implements the "Focus Sprint - Nami" Figma frame (node 61:259), a 390-wide
+   artboard. Spacing below is taken straight from the frame's absolute
+   coordinates, so the numbers are deliberately exact rather than rounded.
+   Scoped under .focus-sprint so nothing here leaks into other screens. */
+
+.focus-sprint {
+  gap: 0;                 /* .screen's 16px gap; this frame positions by margin */
+}
+
+.focus-card {
+  background: #DCE6D2;
+  border-radius: 20px;
+  padding: 16px 18px;
+  margin-top: 18px;       /* sits 28px below the header, per the frame */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.focus-eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 13px;
+  letter-spacing: 0.66px;
+  text-transform: uppercase;
+  color: #55684A;
+}
+
+.focus-task {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 24px;
+  color: #2A3524;
+}
+
+.focus-next {
+  margin: 0;
+  font-size: 13.5px;
+  font-style: italic;
+  line-height: 16px;
+  letter-spacing: -0.081px;
+  color: #55684A;
+}
+
+/* Countdown ring. 27px below the focus card + the frame's own 28px top pad. */
+.focus-dial {
+  position: relative;
+  width: 236px;
+  height: 236px;
+  margin: 55px auto 0;
+  flex-shrink: 0;
+}
+
+.focus-ring {
+  display: block;
+  transform: rotate(-90deg);   /* arc starts at 12 o'clock */
+}
+
+.focus-readout {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.focus-time {
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: 0.44px;
+  color: var(--green);
+}
+
+.focus-state {
+  padding-top: 4px;
+  font-size: 12px;
+  letter-spacing: 0.48px;
+  color: #8A8577;
+}
+
+.focus-presets {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 16px 24px 0;
+}
+
+.focus-preset {
+  padding: 10.5px 17.5px;
+  border-radius: 18px;
+  background: #FFFFFF;
+  border: 1px solid #D9D2C2;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.focus-preset-active {
+  background: var(--green);
+  border-color: #33422B;
+  color: #F6F3EC;
+}
+
+.focus-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.focus-adjust {
+  width: 64px;
+  height: 44px;
+  border-radius: 22px;
+  background: #FFFFFF;
+  border: 1px solid #D9D2C2;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.focus-start {
+  width: 140px;
+  height: 52px;
+  border-radius: 26px;
+  background: var(--green);
+  border: none;
+  color: #F6F3EC;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 16px;
+  text-align: center;
+}
+
+.focus-reset-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.focus-reset {
+  background: none;
+  border: none;
+  padding: 8px;
+  font-size: 13.5px;
+  color: #8A8577;
+  text-decoration: underline;
+}
+
+/* ---------- Focus Sprint list cards ---------- */
+
+.focus-list {
+  background: #FBF9F3;
+  border: 1px solid rgba(44, 49, 34, 0.09);
+  border-radius: 18px;
+  padding: 0 16px 6px;
+}
+
+.focus-list:first-of-type {
+  margin-top: 183px;      /* gap between Reset and "Things due today" */
+}
+
+.focus-list-calendar {
+  margin-top: 12px;
+}
+
+.focus-list-title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 19.2px;
+  color: var(--ink);
+  padding-top: 16px;
+  margin-bottom: 6.19px;
+}
+
+.focus-row {
+  display: flex;
+  align-items: center;
+  height: 38.55px;
+  border-bottom: 1px solid rgba(44, 49, 34, 0.07);
+}
+
+.focus-row-due {
+  justify-content: space-between;
+}
+
+.focus-row-last {
+  border-bottom: none;
+}
+
+.focus-row-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 17.55px;
+  color: var(--ink);
+}
+
+.focus-row-time {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 12px;
+  color: #75755F;
+}
+
+/* Calendar rows lead with the time in a fixed 70px column. */
+.focus-row-at {
+  width: 70px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 12px;
+  color: var(--green);
+}
+
+/* ---------- Running-timer popup ----------
+   Shown on every screen except /timer while a session is live. No Figma
+   frame for this one — built from the existing card + pill tokens. */
+
+.timer-popup {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+  z-index: 20;
+  width: min(calc(100% - 32px), 398px);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+}
+
+.timer-popup-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.timer-popup-ring {
+  display: block;
+  flex-shrink: 0;
+}
+
+.timer-popup-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.timer-popup-time {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.timer-popup-task {
+  font-size: 12px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timer-popup-btn {
+  flex-shrink: 0;
+  background: var(--green);
+  color: var(--green-ink);
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
