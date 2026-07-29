@@ -11,7 +11,7 @@ initThemeColor()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId="870893688043-le86bdqdft3g4madkphhsilo0nh2a8t7.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <HashRouter>
         <App />
       </HashRouter>

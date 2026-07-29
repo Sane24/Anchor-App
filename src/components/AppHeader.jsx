@@ -6,7 +6,7 @@ export default function AppHeader() {
     <header className="header">
       <div className="header-logo">
         <span style={{ color: 'var(--green)', display: 'grid', placeItems: 'center' }}>
-          <AnchorMark size={40} />
+          <AnchorMark size={38} />
         </span>
         <div>
           <div className="header-name">Anchor</div>

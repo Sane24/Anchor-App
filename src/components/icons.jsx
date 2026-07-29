@@ -1,4 +1,4 @@
-// Placeholder icon
+// icon
 
 const base = (size) => ({
   width: size,
@@ -60,22 +60,27 @@ export const RepeatIcon = ({ size = 12 }) => (
   </svg>
 )
 
-// The Anchor logo mark: an anchor inside a ring.
-export const AnchorMark = ({ size = 40 }) => (
+// The Anchor logo mark: a sprouting anchor on a theme-colored disc.
+export const AnchorMark = ({ size = 38 }) => (
   <svg
     width={size}
     height={size}
-    viewBox="0 0 40 40"
+    viewBox="0 0 38 38"
     fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
     aria-hidden="true"
   >
-    <circle cx="20" cy="20" r="19" />
-    <circle cx="20" cy="11" r="3.2" />
-    <path d="M20 14.2V29" />
-    <path d="M14.5 17.5h11" />
-    <path d="M11.5 22.5A8.5 8.5 0 0 0 20 29a8.5 8.5 0 0 0 8.5-6.5" />
+    <rect width="38" height="38" rx="19" fill="currentColor" />
+    <g
+      stroke="var(--green-ink)"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 15.9375V26.875" />
+      <path d="M15.0625 19H22.9375" />
+      <path d="M12.4375 21.625C12.4375 23.3655 13.1289 25.0347 14.3596 26.2654C15.5903 27.4961 17.2595 28.1875 19 28.1875C20.7405 28.1875 22.4097 27.4961 23.6404 26.2654C24.8711 25.0347 25.5625 23.3655 25.5625 21.625" />
+      <path d="M19 15.9375C19 13.6625 20.6625 12.175 22.85 12.175C22.85 14.45 21.1875 15.9375 19 15.9375Z" />
+      <path d="M19 15.9375C19 14.0125 17.6 12.7875 15.7625 12.7875C15.7625 14.7125 17.1625 15.9375 19 15.9375Z" />
+    </g>
   </svg>
 )

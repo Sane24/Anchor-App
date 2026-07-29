@@ -1,6 +1,7 @@
 # Anchor
 
 Steady the day. Turn scattered obligations into three small, startable anchors.
+Pull all tasks and events from google calendar and gmail.
 
 CS160 Summer 2026 final project.
 

@@ -9,7 +9,7 @@
   background: var(--page);
 }
 
-/* ---------- Header ---------- */
+/* Header */
 
 .header {
   display: flex;
@@ -45,7 +45,7 @@
   place-items: center;
 }
 
-/* ---------- Screen body ---------- */
+/* Screen body */
 
 .screen {
   flex: 1;
@@ -112,7 +112,7 @@
   color: var(--ink-eyebrow);
 }
 
-/* ---------- Tab bar ---------- */
+/* Tab bar */
 
 .tabbar {
   position: fixed;
@@ -158,7 +158,7 @@
   color: var(--ink-soft);
 }
 
-/* ---------- Theme color picker ----------
+/* Theme color picker
    4 accent presets, used on the Settings screen to override
    --green / --card-alt at runtime. Each button reads its own accent
    via the --theme-color custom property (set inline per-option) so
