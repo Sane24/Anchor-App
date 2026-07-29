@@ -39,13 +39,13 @@ export default function Timer() {
           countdown runs. */}
       <div className="focus-dial">
         <svg className="focus-ring" viewBox="0 0 236 236" width="236" height="236" aria-hidden="true">
-          <circle cx="118" cy="118" r={RING_R} fill="none" stroke="#E3DCCB" strokeWidth="14" />
+          <circle className="ring-track" cx="118" cy="118" r={RING_R} fill="none" strokeWidth="14" />
           <circle
+            className="ring-progress"
             cx="118"
             cy="118"
             r={RING_R}
             fill="none"
-            stroke="#33422B"
             strokeWidth="14"
             strokeLinecap="round"
             strokeDasharray={RING_C}

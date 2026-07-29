@@ -319,12 +319,21 @@
    coordinates, so the numbers are deliberately exact rather than rounded.
    Scoped under .focus-sprint so nothing here leaks into other screens. */
 
+/* The accent picker in Settings only overrides --green and --card-alt, so every
+   green-family colour here is derived from --green rather than hardcoded. That
+   way switching the theme repaints this screen too. */
+.focus-sprint,
+.timer-popup {
+  --focus-deep: color-mix(in srgb, var(--green) 55%, var(--ink));
+  --focus-label: color-mix(in srgb, var(--green) 75%, var(--ink-soft));
+}
+
 .focus-sprint {
   gap: 0;                 /* .screen's 16px gap; this frame positions by margin */
 }
 
 .focus-card {
-  background: #DCE6D2;
+  background: var(--card-alt);
   border-radius: 20px;
   padding: 16px 18px;
   margin-top: 18px;       /* sits 28px below the header, per the frame */
@@ -340,7 +349,7 @@
   line-height: 13px;
   letter-spacing: 0.66px;
   text-transform: uppercase;
-  color: #55684A;
+  color: var(--focus-label);
 }
 
 .focus-task {
@@ -348,7 +357,7 @@
   font-size: 20px;
   font-weight: 600;
   line-height: 24px;
-  color: #2A3524;
+  color: var(--ink);
 }
 
 .focus-next {
@@ -357,7 +366,7 @@
   font-style: italic;
   line-height: 16px;
   letter-spacing: -0.081px;
-  color: #55684A;
+  color: var(--focus-label);
 }
 
 /* Countdown ring. 27px below the focus card + the frame's own 28px top pad. */
@@ -372,6 +381,15 @@
 .focus-ring {
   display: block;
   transform: rotate(-90deg);   /* arc starts at 12 o'clock */
+}
+
+/* Stroke colours live here, not as SVG attributes, so they follow the theme. */
+.ring-track {
+  stroke: var(--line);
+}
+
+.ring-progress {
+  stroke: var(--focus-deep);
 }
 
 .focus-readout {
@@ -394,7 +412,7 @@
   padding-top: 4px;
   font-size: 12px;
   letter-spacing: 0.48px;
-  color: #8A8577;
+  color: var(--ink-soft);
 }
 
 .focus-presets {
@@ -418,8 +436,8 @@
 
 .focus-preset-active {
   background: var(--green);
-  border-color: #33422B;
-  color: #F6F3EC;
+  border-color: var(--focus-deep);
+  color: var(--green-ink);
 }
 
 .focus-controls {
@@ -448,7 +466,7 @@
   border-radius: 26px;
   background: var(--green);
   border: none;
-  color: #F6F3EC;
+  color: var(--green-ink);
   font-family: var(--display);
   font-weight: 700;
   font-size: 16px;
@@ -466,7 +484,7 @@
   border: none;
   padding: 8px;
   font-size: 13.5px;
-  color: #8A8577;
+  color: var(--ink-soft);
   text-decoration: underline;
 }
 

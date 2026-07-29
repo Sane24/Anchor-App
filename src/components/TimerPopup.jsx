@@ -20,13 +20,13 @@ export default function TimerPopup() {
     <div className="timer-popup">
       <Link className="timer-popup-main" to="/timer" aria-label="Back to the focus timer">
         <svg className="timer-popup-ring" viewBox="0 0 34 34" width="34" height="34" aria-hidden="true">
-          <circle cx="17" cy="17" r={R} fill="none" stroke="#E3DCCB" strokeWidth="4" />
+          <circle className="ring-track" cx="17" cy="17" r={R} fill="none" strokeWidth="4" />
           <circle
+            className="ring-progress"
             cx="17"
             cy="17"
             r={R}
             fill="none"
-            stroke="#33422B"
             strokeWidth="4"
             strokeLinecap="round"
             strokeDasharray={C}
