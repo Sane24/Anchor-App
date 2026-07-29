@@ -57,8 +57,35 @@ export default function Today() {
 
       <Placeholder
         title="Today's anchors"
-        note="Three checkable anchors, each with a first step, plus Things due today and On the calendar."
+        note="Three checkable anchors, each with an editable first step."
       />
+
+      <section className="today-info-list">
+        <h3 className="today-info-title">Things due today</h3>
+        <div className="today-info-row today-info-row-due">
+          <span className="today-info-label">CS160 PA#2</span>
+          <span className="today-info-time">11:59 PM</span>
+        </div>
+        <div className="today-info-row today-info-row-due">
+          <span className="today-info-label">Essay outline</span>
+          <span className="today-info-time">5:00 PM</span>
+        </div>
+        <div className="today-info-row today-info-row-due today-info-row-last">
+          <span className="today-info-label">Reply to research email</span>
+        </div>
+      </section>
+
+      <section className="today-info-list">
+        <h3 className="today-info-title">On the calendar</h3>
+        <div className="today-info-row">
+          <span className="today-info-at">2:00 PM</span>
+          <span className="today-info-label">Research meeting</span>
+        </div>
+        <div className="today-info-row today-info-row-last">
+          <span className="today-info-at">5:30 PM</span>
+          <span className="today-info-label">Gym</span>
+        </div>
+      </section>
     </div>
   )
 }

@@ -488,24 +488,16 @@
   text-decoration: underline;
 }
 
-/* ---------- Focus Sprint list cards ---------- */
+/* ---------- Today information cards ---------- */
 
-.focus-list {
+.today-info-list {
   background: #FBF9F3;
   border: 1px solid rgba(44, 49, 34, 0.09);
   border-radius: 18px;
   padding: 0 16px 6px;
 }
 
-.focus-list:first-of-type {
-  margin-top: 183px;      /* gap between Reset and "Things due today" */
-}
-
-.focus-list-calendar {
-  margin-top: 12px;
-}
-
-.focus-list-title {
+.today-info-title {
   font-family: var(--display);
   font-weight: 400;
   font-size: 16px;
@@ -515,29 +507,29 @@
   margin-bottom: 6.19px;
 }
 
-.focus-row {
+.today-info-row {
   display: flex;
   align-items: center;
   height: 38.55px;
   border-bottom: 1px solid rgba(44, 49, 34, 0.07);
 }
 
-.focus-row-due {
+.today-info-row-due {
   justify-content: space-between;
 }
 
-.focus-row-last {
+.today-info-row-last {
   border-bottom: none;
 }
 
-.focus-row-label {
+.today-info-label {
   font-size: 13.5px;
   font-weight: 500;
   line-height: 17.55px;
   color: var(--ink);
 }
 
-.focus-row-time {
+.today-info-time {
   font-size: 12px;
   font-weight: 500;
   line-height: 12px;
@@ -545,7 +537,7 @@
 }
 
 /* Calendar rows lead with the time in a fixed 70px column. */
-.focus-row-at {
+.today-info-at {
   width: 70px;
   flex-shrink: 0;
   font-size: 12px;

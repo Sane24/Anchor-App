@@ -95,33 +95,6 @@ export default function Timer() {
           Reset
         </button>
       </div>
-
-      <section className="focus-list">
-        <h3 className="focus-list-title">Things due today</h3>
-        <div className="focus-row focus-row-due">
-          <span className="focus-row-label">CS160 PA#2</span>
-          <span className="focus-row-time">11:59 PM</span>
-        </div>
-        <div className="focus-row focus-row-due">
-          <span className="focus-row-label">Essay outline</span>
-          <span className="focus-row-time">5:00 PM</span>
-        </div>
-        <div className="focus-row focus-row-due focus-row-last">
-          <span className="focus-row-label">Reply to research email</span>
-        </div>
-      </section>
-
-      <section className="focus-list focus-list-calendar">
-        <h3 className="focus-list-title">On the calendar</h3>
-        <div className="focus-row">
-          <span className="focus-row-at">2:00 PM</span>
-          <span className="focus-row-label">Research meeting</span>
-        </div>
-        <div className="focus-row focus-row-last">
-          <span className="focus-row-at">5:30 PM</span>
-          <span className="focus-row-label">Gym</span>
-        </div>
-      </section>
     </div>
   )
 }
