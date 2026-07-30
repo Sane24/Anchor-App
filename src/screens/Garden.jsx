@@ -1,26 +1,26 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import GardenScene from '../components/GardenScene'
+import GardenScene, { OakGlyph, PoppyGlyph, LilyGlyph, KoiGlyph } from '../components/GardenScene'
+import GardenImmersive from '../components/GardenImmersive'
 import { loadAllDayPlans, loadSessions } from '../store'
 
 // What grows from what:
 //   focus sprints  -> the oak (total focused minutes) + one koi per sprint
 //   landed anchors -> wildflowers, species by task source
 //   comebacks      -> water lilies (finished after being moved to tomorrow)
-// Counting happens here; GardenScene just draws what it's told.
+// Counting happens here; GardenScene just draws what it's told. Each grown
+// thing keeps the task that grew it, so the walk-in view can tell its story.
 
 const OAK_STAGES = [
-  { name: 'a seed', at: 0 },
-  { name: 'a sprout', at: 5 },
-  { name: 'a sapling', at: 30 },
-  { name: 'a young oak', at: 90 },
-  { name: 'a full oak', at: 180 },
-  { name: 'in blossom', at: 320 },
+  { name: 'A seed', at: 0 },
+  { name: 'A sprout', at: 5 },
+  { name: 'A sapling', at: 30 },
+  { name: 'A young oak', at: 90 },
+  { name: 'A full oak', at: 180 },
+  { name: 'In blossom', at: 320 },
 ]
 
-const MAX_FLOWERS = 10
-const MAX_LILIES = 4
-const MAX_KOI = 6
+const MAX_KOI = 8
 
 function speciesFor(source) {
   if (source === 'calendar') return 'bell'
@@ -39,84 +39,72 @@ function computeStats() {
       sessions.reduce((total, s) => total + (s.plannedSeconds || 0), 0) / 60
     ),
     sprints: sessions.length,
+    koi: sessions.slice(-MAX_KOI).map((session) => ({
+      id: session.id,
+      task: session.task,
+      minutes: Math.round((session.plannedSeconds || 0) / 60),
+      endedAt: session.endedAt,
+    })),
     flowers: landed
       .filter((anchor) => !isComeback(anchor))
-      .map((anchor) => ({ id: anchor.id, species: speciesFor(anchor.source) })),
-    comebacks: landed.filter(isComeback).length,
+      .map((anchor) => ({
+        id: anchor.id,
+        species: speciesFor(anchor.source),
+        title: anchor.title,
+        source: anchor.source,
+        completedAt: anchor.completedAt,
+      })),
+    lilies: landed.filter(isComeback).map((anchor) => ({
+      id: anchor.id,
+      title: anchor.title,
+      completedAt: anchor.completedAt,
+      rolledFrom: anchor.rolledFrom,
+    })),
   }
 }
 
-// A tended garden, for the "peek at a season" preview. Nothing is saved.
+// A tended garden, for the "peek at a season" preview. Nothing is saved, and
+// the sample tasks are obviously samples.
 const PREVIEW_STATS = {
   focusMinutes: 340,
-  sprints: 9,
-  comebacks: 3,
-  flowers: [
-    { id: 'p1', species: 'poppy' },
-    { id: 'p2', species: 'daisy' },
-    { id: 'p3', species: 'bell' },
-    { id: 'p4', species: 'poppy' },
-    { id: 'p5', species: 'daisy' },
-    { id: 'p6', species: 'poppy' },
-    { id: 'p7', species: 'bell' },
-    { id: 'p8', species: 'daisy' },
+  sprints: 12,
+  koi: [
+    { id: 'pk1', task: 'Sample: essay outline', minutes: 15, endedAt: '2026-07-27T10:15:00Z' },
+    { id: 'pk2', task: 'Sample: CS160 PA#2', minutes: 25, endedAt: '2026-07-27T16:40:00Z' },
+    { id: 'pk3', task: 'Sample: reading response', minutes: 10, endedAt: '2026-07-28T09:20:00Z' },
+    { id: 'pk4', task: 'Sample: LeetCode habit', minutes: 20, endedAt: '2026-07-28T19:05:00Z' },
+    { id: 'pk5', task: 'Sample: Figma prototype', minutes: 45, endedAt: '2026-07-29T11:30:00Z' },
+    { id: 'pk6', task: 'Sample: study for midterm', minutes: 30, endedAt: '2026-07-29T15:00:00Z' },
+    { id: 'pk7', task: 'Sample: problem set 3', minutes: 25, endedAt: '2026-07-29T17:10:00Z' },
+    { id: 'pk8', task: 'Sample: lecture notes review', minutes: 15, endedAt: '2026-07-29T19:40:00Z' },
   ],
-}
-
-// Miniatures of the scene elements, so the legend reads as a field guide.
-
-function OakGlyph() {
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18">
-      <path d="M10 11 V 18" stroke="#7B5B41" strokeWidth="2" strokeLinecap="round" fill="none" />
-      <circle cx="6.6" cy="9.4" r="3.8" fill="#66793F" />
-      <circle cx="13.4" cy="9.4" r="3.6" fill="#8CA061" />
-      <circle cx="10" cy="6.6" r="3.9" fill="#77894F" />
-    </svg>
-  )
-}
-
-function PoppyGlyph() {
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18">
-      <g transform="translate(10 10)">
-        {[0, 72, 144, 216, 288].map((angle) => (
-          <ellipse key={angle} cx="0" cy="-4.4" rx="3" ry="4.4" fill="#CD7B58" transform={`rotate(${angle})`} />
-        ))}
-        <circle r="2.4" fill="#57452F" />
-      </g>
-    </svg>
-  )
-}
-
-function LilyGlyph() {
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18">
-      <path
-        d="M 2.5 13 A 7.5 4.6 0 1 0 17.5 13 A 7.5 4.6 0 1 0 2.5 13 M 10 13 L 16.8 10.2 L 17.3 13.7 Z"
-        fill="#66814B"
-        fillRule="evenodd"
-      />
-      <g transform="translate(9 8.4)">
-        {[0, 60, 120, 180, 240, 300].map((angle) => (
-          <ellipse key={angle} cx="0" cy="-2.9" rx="1.8" ry="2.9" fill="#ECC2CD" transform={`rotate(${angle})`} />
-        ))}
-        <circle r="1.5" fill="#F6E7EA" />
-      </g>
-    </svg>
-  )
-}
-
-function KoiGlyph() {
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18">
-      <g transform="translate(3.2 10) rotate(-8)">
-        <path d="M0 0 C -2.4 -0.8, -3.6 -2.6, -5 -3.5 C -3.4 -1.1, -3.4 1.1, -5 3.5 C -3.6 2.6, -2.4 0.8, 0 0 Z" fill="#C97B39" transform="translate(3.4 0)" />
-        <path d="M3 0 C 6 -2.9, 10.8 -2.6, 13.6 0 C 10.8 2.6, 6 2.9, 3 0 Z" fill="#D98E4A" />
-        <circle cx="9" cy="-0.3" r="1.4" fill="#F2E4C7" />
-      </g>
-    </svg>
-  )
+  flowers: [
+    { id: 'pf1', species: 'poppy', title: 'Sample: essay outline', completedAt: '2026-07-27T17:00:00Z' },
+    { id: 'pf2', species: 'daisy', title: 'Sample: reply to research email', completedAt: '2026-07-27T18:10:00Z' },
+    { id: 'pf3', species: 'bell', title: 'Sample: research meeting prep', completedAt: '2026-07-28T13:00:00Z' },
+    { id: 'pf4', species: 'poppy', title: 'Sample: clean desk reset', completedAt: '2026-07-28T21:30:00Z' },
+    { id: 'pf5', species: 'daisy', title: 'Sample: send project update', completedAt: '2026-07-29T09:45:00Z' },
+    { id: 'pf6', species: 'poppy', title: 'Sample: Figma prototype', completedAt: '2026-07-29T12:00:00Z' },
+    { id: 'pf7', species: 'bell', title: 'Sample: office hours question', completedAt: '2026-07-29T14:20:00Z' },
+    { id: 'pf8', species: 'daisy', title: 'Sample: flashcard review', completedAt: '2026-07-29T20:00:00Z' },
+    { id: 'pf9', species: 'poppy', title: 'Sample: grocery run', completedAt: '2026-07-30T10:00:00Z' },
+    { id: 'pf10', species: 'daisy', title: 'Sample: inbox sweep', completedAt: '2026-07-30T11:20:00Z' },
+    { id: 'pf11', species: 'bell', title: 'Sample: dentist appointment', completedAt: '2026-07-30T14:00:00Z' },
+    { id: 'pf12', species: 'poppy', title: 'Sample: water the plants', completedAt: '2026-07-30T16:40:00Z' },
+    { id: 'pf13', species: 'daisy', title: 'Sample: thank-you email', completedAt: '2026-07-31T09:10:00Z' },
+    { id: 'pf14', species: 'bell', title: 'Sample: standup prep', completedAt: '2026-07-31T12:30:00Z' },
+    { id: 'pf15', species: 'poppy', title: 'Sample: journal entry', completedAt: '2026-07-31T21:00:00Z' },
+    { id: 'pf16', species: 'daisy', title: 'Sample: budget check-in', completedAt: '2026-08-01T10:30:00Z' },
+    { id: 'pf17', species: 'bell', title: 'Sample: group project sync', completedAt: '2026-08-01T15:00:00Z' },
+    { id: 'pf18', species: 'poppy', title: 'Sample: evening walk', completedAt: '2026-08-01T19:30:00Z' },
+  ],
+  lilies: [
+    { id: 'pl1', title: 'Sample: CS160 PA#2', completedAt: '2026-07-28T22:00:00Z' },
+    { id: 'pl2', title: 'Sample: laundry, finally', completedAt: '2026-07-29T10:00:00Z' },
+    { id: 'pl3', title: 'Sample: dreaded email', completedAt: '2026-07-29T16:30:00Z' },
+    { id: 'pl4', title: 'Sample: gym, week two', completedAt: '2026-07-30T18:00:00Z' },
+    { id: 'pl5', title: 'Sample: call home', completedAt: '2026-07-31T17:20:00Z' },
+  ],
 }
 
 function oakStageIndex(minutes) {
@@ -129,6 +117,7 @@ function oakStageIndex(minutes) {
 
 export default function Garden() {
   const [previewing, setPreviewing] = useState(false)
+  const [inside, setInside] = useState(false)
   const real = useMemo(computeStats, [])
   const stats = previewing ? PREVIEW_STATS : real
 
@@ -140,7 +129,7 @@ export default function Garden() {
     : 1
 
   const empty =
-    !previewing && stats.focusMinutes === 0 && stats.flowers.length === 0 && stats.comebacks === 0
+    !previewing && stats.focusMinutes === 0 && stats.flowers.length === 0 && stats.lilies.length === 0
 
   return (
     <div className="screen garden-screen">
@@ -149,17 +138,22 @@ export default function Garden() {
         <p className="garden-sub">A small world that grows as you land the day.</p>
       </div>
 
-      <div className={`card garden-scene-card${previewing ? ' garden-previewing' : ''}`}>
+      <button
+        className={`card garden-scene-card garden-scene-open${previewing ? ' garden-previewing' : ''}`}
+        type="button"
+        aria-label="Enter your garden"
+        onClick={() => setInside(true)}
+      >
         <GardenScene
           oakStage={stage}
-          flowers={stats.flowers.slice(0, MAX_FLOWERS)}
-          lilies={Math.min(stats.comebacks, MAX_LILIES)}
-          koi={Math.min(stats.sprints, MAX_KOI)}
+          flowers={stats.flowers}
+          lilies={stats.lilies}
+          koi={stats.koi}
           showButterfly={stats.flowers.length >= 3}
           showDragonfly={stats.sprints >= 4}
         />
         {previewing && <span className="garden-preview-tag">Preview</span>}
-      </div>
+      </button>
 
       <div className="garden-preview-row">
         <button
@@ -203,7 +197,7 @@ export default function Garden() {
           </div>
           <p className="garden-oak-note">
             {next
-              ? `${OAK_STAGES[stage].name[0].toUpperCase() + OAK_STAGES[stage].name.slice(1)} — ${next.at - stats.focusMinutes} focused minutes until it's ${next.name}.`
+              ? `${OAK_STAGES[stage].name} — ${next.at - stats.focusMinutes} focused minutes until it's ${next.name.toLowerCase()}.`
               : 'In full blossom. Every sprint keeps it that way.'}
           </p>
         </div>
@@ -234,7 +228,7 @@ export default function Garden() {
               <strong>Comebacks open water lilies</strong>
               <small>Anchors finished after moving to tomorrow. Recovery counts.</small>
             </span>
-            <em>{stats.comebacks}</em>
+            <em>{stats.lilies.length}</em>
           </li>
           <li>
             <span className="garden-legend-dot" aria-hidden="true"><KoiGlyph /></span>
@@ -246,6 +240,16 @@ export default function Garden() {
           </li>
         </ul>
       </div>
+
+      {inside && (
+        <GardenImmersive
+          stats={stats}
+          oakStage={stage}
+          oakStageName={OAK_STAGES[stage].name}
+          previewing={previewing}
+          onClose={() => setInside(false)}
+        />
+      )}
     </div>
   )
 }

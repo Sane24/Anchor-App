@@ -1449,3 +1449,169 @@
   30% { opacity: 0.55; }
   100% { opacity: 0; transform: scale(1.5); }
 }
+
+/* ---------- Garden: walk-in view ---------- */
+
+.garden-scene-open {
+  display: block;
+  width: 100%;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.garden-scene-open:active .garden-scene {
+  transform: scale(0.99);
+}
+
+/* Sits above the screen but leaves the tab bar visible and reachable. */
+.garden-immersive {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  max-width: 430px;
+  margin: 0 auto;
+  background: linear-gradient(#F3EEDC, #E9EBD4 55%, #AEBD8C);
+  animation: garden-enter 0.35s ease both;
+}
+
+@keyframes garden-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.garden-immersive .garden-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.garden-immersive .garden-preview-tag {
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  left: 16px;
+}
+
+.garden-leave {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+/* Tap targets inside the scene */
+
+.garden-pickable {
+  cursor: pointer;
+  outline: none;
+}
+
+/* Keyboard focus: a soft cream ring on the hit circle, in place of the
+   default box outline (which clashes with the artwork). */
+.garden-pickable:focus-visible > circle:last-of-type {
+  stroke: #FAF7EF;
+  stroke-width: 1.6;
+  stroke-dasharray: 4 3;
+}
+
+.garden-halo {
+  fill: rgba(250, 247, 239, 0.28);
+  stroke: #FAF7EF;
+  stroke-width: 1.2;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: garden-halo 2.2s ease-in-out infinite;
+}
+
+@keyframes garden-halo {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.08); }
+}
+
+/* Detail sheet */
+
+.garden-sheet {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+  padding: 13px 14px;
+  animation: garden-sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.4, 1) both;
+}
+
+@keyframes garden-sheet-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.garden-sheet-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--pill);
+  display: grid;
+  place-items: center;
+}
+
+.garden-sheet-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.garden-sheet-body strong {
+  font-family: var(--display);
+  font-size: var(--fs-title);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.garden-sheet-line {
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+}
+
+.garden-sheet-close {
+  flex-shrink: 0;
+  align-self: flex-start;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--pill);
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.garden-sheet-hint {
+  justify-content: center;
+  text-align: center;
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+}
