@@ -461,6 +461,10 @@
   font-size: 12px;
 }
 
+.today-sample-button {
+  margin-top: 14px;
+}
+
 .task-card {
   transition: background-color 160ms ease, border-color 160ms ease;
 }
