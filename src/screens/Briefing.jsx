@@ -2,10 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchCalendarEvents, fetchGmailAsTasks } from '../data/googleData'
 import { getStoredGoogleToken } from '../data/googleAuth'
-import { loadDayPlan, saveBriefingPlan } from '../store'
+import { loadDayPlan, loadJournalEntry, saveBriefingPlan } from '../store'
 import { suggestFirstStep, nextFirstStep } from '../firstSteps'
 
 const FILTERS = ['all', 'manual', 'calendar', 'gmail']
+
+// The "note for tomorrow-you" written in last night's reflection.
+function lastNightNote() {
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  return loadJournalEntry(yesterday)?.remember || ''
+}
 
 function mergeCandidates(...groups) {
   const merged = new Map()
@@ -34,6 +41,7 @@ function sourceName(source) {
 export default function Briefing() {
   const navigate = useNavigate()
   const [initialPlan] = useState(() => loadDayPlan())
+  const [nightNote] = useState(lastNightNote)
   const googleConnected = Boolean(getStoredGoogleToken())
 
   const [items, setItems] = useState(() =>
@@ -174,6 +182,13 @@ export default function Briefing() {
         <h1>Choose up to three Anchors</h1>
         <p>Keep today realistic, then make each first step small enough to begin.</p>
       </section>
+
+      {nightNote && (
+        <div className="briefing-last-night">
+          <span>Last night you wrote</span>
+          <em>“{nightNote}”</em>
+        </div>
+      )}
 
       {!googleConnected && (
         <div className="briefing-connection">

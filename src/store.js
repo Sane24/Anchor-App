@@ -133,6 +133,58 @@ export function loadAllDayPlans() {
   return readPlans()
 }
 
+// Adds a task straight into tomorrow's candidates, so tonight's plan shows up
+// in tomorrow's briefing instead of starting from a blank page.
+export function addTaskForTomorrow(title) {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  const next = loadDayPlan(tomorrow)
+  return saveDayPlan({
+    ...next,
+    candidates: [
+      ...next.candidates,
+      { id: `tonight-${Date.now()}`, title, source: 'manual' },
+    ],
+  }, tomorrow)
+}
+
+// ---------- Night reflection journal ----------
+// One entry per day: { helped, hindered, remember, closedAt }.
+
+const JOURNAL_KEY = 'anchor_journal_v1'
+
+function readJournal() {
+  try {
+    return JSON.parse(localStorage.getItem(JOURNAL_KEY) || '{}')
+  } catch (err) {
+    console.error('Could not read the journal:', err)
+    return {}
+  }
+}
+
+export function loadJournalEntry(date = new Date()) {
+  const key = typeof date === 'string' ? date : dayKey(date)
+  return readJournal()[key] || null
+}
+
+// The whole journal, keyed by date — for "Past nights" and, later, Trends.
+export function loadJournal() {
+  return readJournal()
+}
+
+export function saveJournalEntry(changes, date = new Date()) {
+  const key = typeof date === 'string' ? date : dayKey(date)
+  const journal = readJournal()
+  const entry = { ...journal[key], ...changes, date: key }
+  try {
+    localStorage.setItem(JOURNAL_KEY, JSON.stringify({ ...journal, [key]: entry }))
+  } catch (err) {
+    console.error('Could not save the journal:', err)
+  }
+  return entry
+}
+
 export function loadSessions() {
   try {
     const raw = localStorage.getItem(SESSIONS_KEY)
