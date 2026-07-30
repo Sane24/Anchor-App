@@ -1041,6 +1041,25 @@
   height: 236px;
   margin: 55px auto 0;
   flex-shrink: 0;
+  /* The dial is a drag target, so touch gestures on it must not scroll the
+     page, and the text inside must not select mid-drag. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: ns-resize;
+}
+
+.focus-dial:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 6px;
+  border-radius: 50%;
+}
+
+.focus-dial-hint {
+  margin-top: 2px;
+  font-size: 10.5px;
+  letter-spacing: 0.4px;
+  color: color-mix(in srgb, var(--ink-soft) 75%, transparent);
 }
 
 .focus-ring {
@@ -1055,6 +1074,18 @@
 
 .ring-progress {
   stroke: var(--focus-deep);
+}
+
+/* Draggable handle sitting on the track. The page-coloured ring around it lifts
+   it off the arc so it reads as a separate grabbable dot. */
+.ring-thumb {
+  fill: var(--focus-deep);
+  stroke: var(--page);
+  cursor: grab;
+}
+
+.focus-dial:active .ring-thumb {
+  cursor: grabbing;
 }
 
 .focus-readout {
@@ -1080,6 +1111,48 @@
   color: var(--ink-soft);
 }
 
+/* Pomodoro cycle indicator: which phase you're in, and how many focus rounds
+   are done before the long break. */
+.focus-cycle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.focus-phase {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.66px;
+  text-transform: uppercase;
+  color: var(--focus-label);
+}
+
+.focus-rounds {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.focus-round {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--green) 22%, transparent);
+}
+
+.focus-round.done {
+  background: var(--green);
+}
+
+.focus-next-hint {
+  margin: 5px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
 .focus-presets {
   display: flex;
   justify-content: center;
@@ -1089,6 +1162,7 @@
 }
 
 .focus-preset {
+  white-space: nowrap;
   padding: 10.5px 17.5px;
   border-radius: 18px;
   background: #FFFFFF;
