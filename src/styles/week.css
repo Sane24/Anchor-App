@@ -1,0 +1,277 @@
+/* this week screen styles. — Reed
+   uses tokens from tokens.css no hardcoded hex
+
+/* ---------- weekly briefing card ---------- */
+
+.week-briefing-text {
+    margin: 6px 0 14px;
+    color: var(--ink-soft);
+  }
+  
+  .btn-week-primary {
+    background: var(--green);
+    color: var(--green-ink);
+    border: none;
+    border-radius: var(--r-btn);
+    padding: 10px 16px;
+    font-weight: 600;
+    font-size: var(--fs-body);
+  }
+  
+  .btn-week-primary:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  
+  .week-briefing-list {
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+  }
+  
+  .week-briefing-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    padding: 12px 10px;
+    text-align: left;
+    color: var(--ink);
+  }
+  
+  .week-briefing-row:last-child {
+    border-bottom: none;
+  }
+  
+  .week-briefing-day {
+    font-weight: 600;
+  }
+  
+  .week-briefing-count {
+    color: var(--ink-soft);
+    font-size: var(--fs-small);
+  }
+  
+  /* ---------- 7-day strip ---------- */
+  
+  .day-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 2px 2px 6px;
+    scrollbar-width: none;
+  }
+  
+  .day-strip::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .day-chip {
+    flex: 0 0 auto;
+    min-width: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    padding: 10px 8px 8px;
+    color: var(--ink);
+  }
+  
+  .day-chip.selected {
+    background: var(--green);
+    border-color: var(--green);
+    color: var(--green-ink);
+  }
+  
+  .day-chip-dow {
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+  
+  .day-chip-num {
+    font-family: var(--display);
+    font-size: var(--fs-title);
+    font-weight: 600;
+  }
+  
+  .day-chip-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.7;
+  }
+  
+  .day-chip-dot.hidden {
+    visibility: hidden;
+  }
+  
+  /* ---------- sections ---------- */
+  
+  .week-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .week-section-title {
+    font-size: var(--fs-title);
+  }
+  
+  /* ---------- task rows ---------- */
+  
+  .week-task {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    text-align: left;
+    border: 1px solid var(--line);
+    width: 100%;
+    color: var(--ink);
+  }
+  
+  .week-task-title {
+    font-weight: 600;
+    font-size: var(--fs-body);
+  }
+  
+  .week-task-title.done {
+    text-decoration: line-through;
+    color: var(--ink-soft);
+  }
+  
+  .week-task-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .week-task-time {
+    color: var(--ink-soft);
+    font-size: var(--fs-small);
+  }
+  
+  /* Source tags — M3 feedback: make Gmail vs Calendar vs manual visible */
+  
+  .source-tag {
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: var(--pill);
+    color: var(--ink-eyebrow);
+    border-radius: var(--r-pill);
+    padding: 3px 9px;
+  }
+  
+  .source-gmail {
+    background: color-mix(in srgb, var(--green) 12%, var(--pill));
+  }
+  
+  .source-calendar {
+    background: color-mix(in srgb, var(--line-strong) 35%, var(--pill));
+  }
+  
+  /* ---------- events ---------- */
+  
+  .week-event {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 13px 16px;
+  }
+  
+  .week-event-time {
+    font-size: var(--fs-small);
+    color: var(--ink-eyebrow);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  
+  /* ---------- loading / empty / error states ---------- */
+  
+  .week-loading,
+  .week-empty,
+  .week-error {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .week-state-note {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: var(--fs-small);
+  }
+  
+  .skeleton {
+    height: 14px;
+    width: 100%;
+    border-radius: 7px;
+    background: var(--pill);
+    animation: week-pulse 1.2s ease-in-out infinite;
+  }
+  
+  .skeleton.short {
+    width: 55%;
+  }
+  
+  @keyframes week-pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+  
+  /* ---------- task detail dialog ---------- */
+  
+  .week-detail-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(44, 49, 34, 0.35);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 50;
+  }
+  
+  .week-detail {
+    width: min(430px, 100%);
+    margin: 0 12px calc(var(--tabbar-h) + 16px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-radius: var(--r-card-lg);
+    padding: 22px;
+  }
+  
+  .week-detail-title {
+    font-size: var(--fs-h2);
+  }
+  
+  .week-detail-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--pill);
+    border-radius: var(--r-card);
+    padding: 12px 14px;
+    font-size: var(--fs-body);
+  }
+  
+  .week-detail-step-pill {
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--ink-eyebrow);
+    white-space: nowrap;
+  }
