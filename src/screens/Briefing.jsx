@@ -144,7 +144,7 @@ export default function Briefing() {
   }
 
   function saveBriefing() {
-    if (selectedIds.length !== 3) return
+    if (selectedIds.length === 0) return
     const existing = new Map(initialPlan.anchors.map((anchor) => [anchor.id, anchor]))
 
     const anchors = selectedIds.map((id) => {
@@ -173,7 +173,7 @@ export default function Briefing() {
 
       <section className="card-sage briefing-hero">
         <p className="eyebrow">Morning briefing</p>
-        <h1>Choose three Anchors</h1>
+        <h1>Choose up to three Anchors</h1>
         <p>Keep today realistic, then make each first step small enough to begin.</p>
       </section>
 
@@ -284,10 +284,14 @@ export default function Briefing() {
       <div className="briefing-finish">
         <button
           type="button"
-          disabled={selectedIds.length !== 3}
+          disabled={selectedIds.length === 0}
           onClick={saveBriefing}
         >
-          {selectedIds.length === 3 ? 'Use these three Anchors' : `Choose ${3 - selectedIds.length} more`}
+          {selectedIds.length === 0
+            ? 'Choose at least one Anchor'
+            : selectedIds.length === 1
+              ? 'Use this Anchor'
+              : `Use these ${selectedIds.length} Anchors`}
           <span aria-hidden="true">→</span>
         </button>
         <p>You can come back and adjust the plan later.</p>

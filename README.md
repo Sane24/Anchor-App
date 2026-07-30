@@ -32,6 +32,7 @@ src/
     AppHeader.jsx       logo + tagline + settings link
     TabBar.jsx          the 5 bottom tabs
     Placeholder.jsx     temporary stand-in for unbuilt screens
+    GardenScene.jsx     the hand-drawn SVG garden landscape (Garden tab)
     icons.jsx           all inline SVG icons
   screens/
     Today.jsx           TAB 1

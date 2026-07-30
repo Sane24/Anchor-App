@@ -112,14 +112,14 @@ export default function Today() {
       <section className="today-anchors">
         <div className="today-anchors-heading">
           <h2>Today’s anchors</h2>
-          <span>{landed} of 3 landed</span>
+          <span>{landed} of {plan.anchors.length || 3} landed</span>
         </div>
 
         {plan.anchors.length === 0 && (
           <div className="today-empty-anchors">
             <span aria-hidden="true">1 · 2 · 3</span>
             <strong>Your Anchors will live here.</strong>
-            <p>Choose three things worth returning to today.</p>
+            <p>Choose one to three things worth returning to today.</p>
           </div>
         )}
 

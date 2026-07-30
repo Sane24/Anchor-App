@@ -128,6 +128,11 @@ export function moveAnchorToTomorrow(anchorId) {
   }, today)
 }
 
+// Every saved day plan, keyed by date. The Garden reads across days.
+export function loadAllDayPlans() {
+  return readPlans()
+}
+
 export function loadSessions() {
   try {
     const raw = localStorage.getItem(SESSIONS_KEY)
