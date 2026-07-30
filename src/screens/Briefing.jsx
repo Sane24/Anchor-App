@@ -3,18 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { fetchCalendarEvents, fetchGmailAsTasks } from '../data/googleData'
 import { getStoredGoogleToken } from '../data/googleAuth'
 import { loadDayPlan, saveBriefingPlan } from '../store'
+import { suggestFirstStep, nextFirstStep } from '../firstSteps'
 
 const FILTERS = ['all', 'manual', 'calendar', 'gmail']
-
-function suggestedStep(title) {
-  const task = title.toLowerCase()
-  if (task.includes('email') || task.includes('reply')) return 'Write the first sentence'
-  if (task.includes('study') || task.includes('review')) return 'Open the study materials'
-  if (task.includes('read')) return 'Read the first paragraph'
-  if (task.includes('figma') || task.includes('design')) return 'Open the project file'
-  if (task.includes('call')) return 'Find the number and open the dialer'
-  return 'Open what you need and work for 5 minutes'
-}
 
 function mergeCandidates(...groups) {
   const merged = new Map()
@@ -58,7 +49,7 @@ export default function Briefing() {
   const [firstSteps, setFirstSteps] = useState(() => {
     const steps = {}
     ;[...initialPlan.rollover, ...initialPlan.anchors].forEach((anchor) => {
-      steps[anchor.id] = anchor.firstStep || suggestedStep(anchor.title)
+      steps[anchor.id] = anchor.firstStep || suggestFirstStep(anchor.title, anchor.source)
     })
     return steps
   })
@@ -122,7 +113,14 @@ export default function Briefing() {
     setSelectedIds((current) => [...current, item.id])
     setFirstSteps((current) => ({
       ...current,
-      [item.id]: current[item.id] || suggestedStep(item.title),
+      [item.id]: current[item.id] || suggestFirstStep(item.title, item.source),
+    }))
+  }
+
+  function tryAnotherStep(item) {
+    setFirstSteps((current) => ({
+      ...current,
+      [item.id]: nextFirstStep(item.title, item.source, current[item.id]),
     }))
   }
 
@@ -137,7 +135,7 @@ export default function Briefing() {
       source: 'manual',
     }
     setItems((current) => [...current, item])
-    setFirstSteps((current) => ({ ...current, [item.id]: suggestedStep(title) }))
+    setFirstSteps((current) => ({ ...current, [item.id]: suggestFirstStep(title, 'manual') }))
     setSelectedIds((current) => (current.length < 3 ? [...current, item.id] : current))
     setCustomTask('')
     setFilter('all')
@@ -153,7 +151,7 @@ export default function Briefing() {
       return {
         id: item.id,
         title: item.title,
-        firstStep: firstSteps[id]?.trim() || suggestedStep(item.title),
+        firstStep: firstSteps[id]?.trim() || suggestFirstStep(item.title, item.source),
         source: item.source,
         start: item.start,
         completed: previous?.completed || false,
@@ -260,11 +258,21 @@ export default function Briefing() {
                 </label>
 
                 {selected && (
-                  <label className="briefing-first-step">
-                    <span>First step</span>
+                  <div className="briefing-first-step">
+                    <div className="briefing-first-step-head">
+                      <span>First step</span>
+                      <button
+                        type="button"
+                        className="step-suggest-btn"
+                        onClick={() => tryAnotherStep(item)}
+                      >
+                        Try another
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={firstSteps[item.id] || ''}
+                      aria-label={`First step for ${item.title}`}
                       onChange={(event) =>
                         setFirstSteps((current) => ({
                           ...current,
@@ -273,7 +281,7 @@ export default function Briefing() {
                       }
                       placeholder="What is the smallest way to begin?"
                     />
-                  </label>
+                  </div>
                 )}
               </article>
             )

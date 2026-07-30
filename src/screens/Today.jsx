@@ -8,6 +8,7 @@ import {
   saveDayPlan,
   updateTodayAnchor,
 } from '../store'
+import { nextFirstStep } from '../firstSteps'
 
 // Lets you reach the focus timer (and demo the app) without connecting Google.
 // These go through the normal store path, so they behave like real anchors.
@@ -184,6 +185,15 @@ export default function Today() {
                   <div>
                     <button type="submit" disabled={!stepDraft.trim()}>Save</button>
                     <button type="button" onClick={() => setEditingId(null)}>Cancel</button>
+                    <button
+                      type="button"
+                      className="step-suggest-btn"
+                      onClick={() =>
+                        setStepDraft(nextFirstStep(anchor.title, anchor.source, stepDraft))
+                      }
+                    >
+                      Try another
+                    </button>
                   </div>
                 </form>
               ) : (
