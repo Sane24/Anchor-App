@@ -28,13 +28,69 @@ function GoogleConnection() {
     setConnected(false)
   }
 
-  return connected ? (
-    <div>
-      <p style={{ color: 'var(--green)' }}>✓ Google connected</p>
-      <button onClick={disconnectGoogle}>Disconnect Google</button>
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: '12px',
+        padding: '12px',
+        borderRadius: '10px',
+        background: 'var(--paper, #fff)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            background: 'var(--sand, #f0ece2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px',
+          }}
+        >
+          G
+        </div>
+        <div>
+          <p style={{ margin: 0, fontWeight: 600 }}>Google</p>
+          <p style={{ margin: 0, fontSize: '0.85em', color: 'var(--ink-soft)' }}>
+            {connected ? 'Connected' : 'Calendar and Gmail'}
+          </p>
+        </div>
+      </div>
+
+      {connected ? (
+        <button
+          onClick={disconnectGoogle}
+          style={{
+            borderRadius: '20px',
+            padding: '8px 16px',
+            background: 'transparent',
+            border: '1px solid var(--ink-soft)',
+            color: 'var(--ink-soft)',
+          }}
+        >
+          Disconnect
+        </button>
+      ) : (
+        <button
+          onClick={() => connectGoogle()}
+          style={{
+            borderRadius: '20px',
+            padding: '8px 16px',
+            background: 'var(--green)',
+            border: 'none',
+            color: '#fff',
+          }}
+        >
+          Connect
+        </button>
+      )}
     </div>
-  ) : (
-    <button onClick={() => connectGoogle()}>Connect Google</button>
   )
 }
 
@@ -109,7 +165,7 @@ export default function Settings({ user, onLogout }) {
 
       <div className="card">
         <p className="eyebrow">Connections</p>
-        <p>Calendar events + Gmail as tasks. The briefing only pulls from what's connected.</p>
+        <p>Pulls calendar events and unread email as tasks.</p>
 
         {isGoogleConfigured ? (
           <GoogleConnection />
