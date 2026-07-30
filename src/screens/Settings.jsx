@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react'
-import { useGoogleConnect, getStoredGoogleToken, clearGoogleToken } from '../data/googleAuth'
+import {
+  useGoogleConnect,
+  getStoredGoogleToken,
+  clearGoogleToken,
+  isGoogleConfigured,
+} from '../data/googleAuth'
 import { useThemeColor, colorThemes } from '../hooks/useThemeColor'
 
-export default function Settings() {
-  const [themeId, setThemeId] = useThemeColor()
+// Kept in its own component so useGoogleConnect only runs when a client ID
+// exists. Hooks can't be called conditionally, but an unrendered component
+// never calls them at all — and calling this one without an ID throws inside
+// the Google SDK, which takes the whole app down.
+function GoogleConnection() {
   const [connected, setConnected] = useState(false)
 
   useEffect(() => {
@@ -18,6 +26,19 @@ export default function Settings() {
     clearGoogleToken()
     setConnected(false)
   }
+
+  return connected ? (
+    <div>
+      <p style={{ color: 'var(--green)' }}>✓ Google connected</p>
+      <button onClick={disconnectGoogle}>Disconnect Google</button>
+    </div>
+  ) : (
+    <button onClick={() => connectGoogle()}>Connect Google</button>
+  )
+}
+
+export default function Settings() {
+  const [themeId, setThemeId] = useThemeColor()
 
   return (
     <div className="screen">
@@ -49,13 +70,14 @@ export default function Settings() {
         <p className="eyebrow">Connections</p>
         <p>Calendar events + Gmail as tasks. The briefing only pulls from what's connected.</p>
 
-        {connected ? (
-          <div>
-            <p style={{ color: 'var(--green)' }}>✓ Google connected</p>
-            <button onClick={disconnectGoogle}>Disconnect Google</button>
-          </div>
+        {isGoogleConfigured ? (
+          <GoogleConnection />
         ) : (
-          <button onClick={() => connectGoogle()}>Connect Google</button>
+          <p className="card-section-note">
+            Google sign-in isn’t set up on this machine. Copy <code>.env.example</code> to{' '}
+            <code>.env</code>, then restart the dev server. Manual planning in the briefing
+            works without it.
+          </p>
         )}
       </div>
     </div>
