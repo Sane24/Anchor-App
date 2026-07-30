@@ -167,7 +167,7 @@ export default function Settings({ user, onLogout }) {
       <NotificationSettings />
       
       <div className="card">
-        <p className="eyebrow">Connections</p>
+        <p className="eyebrow">Accounts Connected</p>
         <p>Pulls calendar events and unread email as tasks.</p>
 
         {isGoogleConfigured ? (
