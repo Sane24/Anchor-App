@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
-import { supabase } from './lib/supabaseClient' 
+import { supabase } from './lib/supabaseClient'
+import { pullAndMerge, clearSyncUser } from './data/sync'
+import { subscribeToStore } from './store'
 import { Routes, Route } from 'react-router-dom'
 import AppHeader from './components/AppHeader'
 import TabBar from './components/TabBar'
@@ -16,12 +18,16 @@ import Auth from './screens/Auth'
 
 export default function App() {
   const [user, setUser] = useState(null)
+  // Bumped when a sync pull replaces local data, so the current screen
+  // re-reads the store (it's the `key` on <Routes> below).
+  const [dataVersion, setDataVersion] = useState(0)
 
   useEffect(() => {
     // Check if someone's already signed in (e.g. they refreshed the page)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user.user_metadata?.full_name || session.user.email)
+        pullAndMerge(session.user.id)
       }
     })
 
@@ -29,19 +35,29 @@ export default function App() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user.user_metadata?.full_name || session.user.email)
+        // Signing in pulls this account's data and merges it with what's on
+        // this device. Signing out leaves local data alone — the app keeps
+        // working anonymously.
+        pullAndMerge(session.user.id)
       } else {
         setUser(null)
+        clearSyncUser()
       }
     })
 
-    return () => listener.subscription.unsubscribe()
+    const unsubscribeStore = subscribeToStore(() => setDataVersion((v) => v + 1))
+
+    return () => {
+      listener.subscription.unsubscribe()
+      unsubscribeStore()
+    }
   }, [])
 
   return (
     <FocusSessionProvider>
       <div className="app">
         <AppHeader user={user} />
-        <Routes>
+        <Routes key={dataVersion}>
           <Route path="/" element={<Today />} />
           <Route path="/garden" element={<Garden />} />
           <Route path="/week" element={<ThisWeek />} />

@@ -1,8 +1,48 @@
-// Local persistence. localStorage-backed until there's a real backend.
+// Local persistence. localStorage is the source of truth — the app works
+// fully signed-out. When someone is signed in, sync.js registers a write hook
+// here so every local save also mirrors to their account.
 
 const SESSIONS_KEY = 'anchor_focus_sessions'
 const DAILY_PLANS_KEY = 'anchor_daily_plans_v1'
 const LEGACY_TODAY_KEY = 'anchor_today_tasks'
+
+// ---------- Optional sync layer ----------
+// sync.js registers rather than being imported, so the store never depends on
+// it (no circular import, and the app runs with sync entirely absent).
+
+let writeHook = null
+
+export function setWriteHook(fn) {
+  writeHook = fn
+}
+
+function afterWrite(kind, payload) {
+  try {
+    writeHook?.(kind, payload)
+  } catch (err) {
+    console.error('Sync hook failed:', err)
+  }
+}
+
+// Screens can subscribe to hear about out-of-band changes (a sync pull
+// replacing collections) and re-read.
+
+const storeSubscribers = new Set()
+
+export function subscribeToStore(fn) {
+  storeSubscribers.add(fn)
+  return () => storeSubscribers.delete(fn)
+}
+
+export function notifyStoreChanged() {
+  storeSubscribers.forEach((fn) => {
+    try {
+      fn()
+    } catch (err) {
+      console.error('Store subscriber failed:', err)
+    }
+  })
+}
 
 export function dayKey(date = new Date()) {
   const year = date.getFullYear()
@@ -80,6 +120,7 @@ export function saveDayPlan(plan, date = new Date()) {
     updatedAt: new Date().toISOString(),
   }
   writePlans({ ...plans, [key]: saved })
+  afterWrite('day_plan', saved)
   return saved
 }
 
@@ -173,15 +214,21 @@ export function loadJournal() {
   return readJournal()
 }
 
-export function saveJournalEntry(changes, date = new Date()) {
-  const key = typeof date === 'string' ? date : dayKey(date)
-  const journal = readJournal()
-  const entry = { ...journal[key], ...changes, date: key }
+function writeJournal(journal) {
   try {
-    localStorage.setItem(JOURNAL_KEY, JSON.stringify({ ...journal, [key]: entry }))
+    localStorage.setItem(JOURNAL_KEY, JSON.stringify(journal))
   } catch (err) {
     console.error('Could not save the journal:', err)
   }
+}
+
+export function saveJournalEntry(changes, date = new Date()) {
+  const key = typeof date === 'string' ? date : dayKey(date)
+  const journal = readJournal()
+  // updatedAt lets the sync merge pick the newer copy of a night.
+  const entry = { ...journal[key], ...changes, date: key, updatedAt: new Date().toISOString() }
+  writeJournal({ ...journal, [key]: entry })
+  afterWrite('journal', entry)
   return entry
 }
 
@@ -195,13 +242,27 @@ export function loadSessions() {
   }
 }
 
-export function saveSession(session) {
-  const sessions = loadSessions()
-  sessions.push(session)
+function writeSessions(sessions) {
   try {
     localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions))
   } catch (err) {
     console.error('Could not save focus session:', err)
   }
+}
+
+export function saveSession(session) {
+  const sessions = loadSessions()
+  sessions.push(session)
+  writeSessions(sessions)
+  afterWrite('session', session)
   return sessions
+}
+
+// Used by the sync layer after a pull: swap in the merged collections
+// wholesale, then let screens know to re-read. Not for screen code.
+export function replaceCollections({ plans, journal, sessions }) {
+  if (plans) writePlans(plans)
+  if (journal) writeJournal(journal)
+  if (sessions) writeSessions(sessions)
+  notifyStoreChanged()
 }
