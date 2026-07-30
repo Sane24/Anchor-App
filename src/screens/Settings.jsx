@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   useGoogleConnect,
   getStoredGoogleToken,
@@ -70,7 +71,17 @@ export default function Settings({ user, onLogout }) {
             </button>
           </div>
         ) : (
-          <p className="card-section-note">Not signed in.</p>
+          <Link
+            to="/auth"
+            style={{
+              color: 'var(--green)',
+              fontWeight: 600,
+              fontSize: '14px',
+              textDecoration: 'underline',
+            }}
+          >
+            Sign In
+          </Link>
         )}
       </div>
 

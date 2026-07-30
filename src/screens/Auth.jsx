@@ -31,10 +31,10 @@ export default function Auth({ onLogin }) {
                 onLogin(displayName)
             }
 
-            navigate('/today')
+            navigate('/')
         } catch (err) {
             console.error('Login error:', err)
-            navigate('/today')
+            navigate('/')
         }
     }
 

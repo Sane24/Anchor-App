@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import AppHeader from './components/AppHeader'
 import TabBar from './components/TabBar'
 import TimerPopup from './components/TimerPopup'
@@ -14,22 +14,8 @@ import Timer from './screens/Timer'
 import Auth from './screens/Auth'
 
 export default function App() {
-  const [user, setUser] = useState(null) // null = nobody signed in
+  const [user, setUser] = useState(null)
 
-  // If nobody is signed in, only show the Auth screen —
-  // any other URL gets redirected back to /auth
-  if (!user) {
-    return (
-      <div className="app">
-        <Routes>
-          <Route path="/auth" element={<Auth onLogin={setUser} />} />
-          <Route path="*" element={<Navigate to="/auth" replace />} />
-        </Routes>
-      </div>
-    )
-  }
-
-  // Only reached once `user` is set — the real app
   return (
     <FocusSessionProvider>
       <div className="app">
@@ -42,7 +28,7 @@ export default function App() {
           <Route path="/settings" element={<Settings user={user} onLogout={() => setUser(null)} />} />
           <Route path="/briefing" element={<Briefing />} />
           <Route path="/timer" element={<Timer />} />
-          <Route path="/auth" element={<Navigate to="/" replace />} />
+          <Route path="/auth" element={<Auth onLogin={setUser} />} />
         </Routes>
         <TimerPopup />
         <TabBar />
