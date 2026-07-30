@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
 export default function Auth() {
@@ -9,6 +9,23 @@ export default function Auth() {
     const [password, setPassword] = useState('')
     const [error, setError] = useState('') // NEW — holds our own error message
     const navigate = useNavigate()
+    const location = useLocation()
+
+    // Signing in is optional, so this screen always needs a way out. Go back to
+    // wherever they came from; if /auth was opened directly there is no history
+    // entry to return to, so fall back to Today.
+    const close = useCallback(() => {
+        if (location.key === 'default') navigate('/')
+        else navigate(-1)
+    }, [location.key, navigate])
+
+    useEffect(() => {
+        const onKey = (event) => {
+            if (event.key === 'Escape') close()
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [close])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -70,8 +87,11 @@ export default function Auth() {
                 zIndex: 9999,
                 padding: '16px',
             }}
-        // Note: no onClick-to-close here — sign-in is required to use the app,
-        // so there's nowhere for a backdrop click to sensibly send someone.
+            // Clicking the backdrop dismisses; the guard keeps clicks inside the
+            // card from bubbling up and closing it.
+            onClick={(event) => {
+                if (event.target === event.currentTarget) close()
+            }}
         >
             <div
                 style={{
@@ -85,6 +105,31 @@ export default function Auth() {
                     position: 'relative',
                 }}
             >
+                <button
+                    type="button"
+                    onClick={close}
+                    aria-label="Close sign in"
+                    style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                        width: '32px',
+                        height: '32px',
+                        display: 'grid',
+                        placeItems: 'center',
+                        background: 'none',
+                        border: 'none',
+                        borderRadius: '50%',
+                        color: '#666666',
+                        fontSize: '20px',
+                        lineHeight: 1,
+                        cursor: 'pointer',
+                        padding: 0,
+                    }}
+                >
+                    ×
+                </button>
+
                 {/* Header */}
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                     <h2 style={{ margin: '0 0 6px 0', fontSize: '22px', color: '#1a1a1a', fontWeight: '700' }}>
