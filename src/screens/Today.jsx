@@ -1,64 +1,237 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EditIcon, RepeatIcon } from '../components/icons'
-import Placeholder from '../components/Placeholder'
 import { useFocusSession } from '../hooks/useFocusSession'
+import {
+  loadDayPlan,
+  moveAnchorToTomorrow,
+  saveDayPlan,
+  updateTodayAnchor,
+} from '../store'
+import { nextFirstStep } from '../firstSteps'
 
-const SAMPLE_ANCHOR = {
-  task: 'Design Figma prototype',
-  step: 'Open Figma and choose a template',
+// Lets you reach the focus timer (and demo the app) without connecting Google.
+// These go through the normal store path, so they behave like real anchors.
+const SAMPLE_ANCHORS = [
+  { title: 'Design Figma prototype', firstStep: 'Open Figma and choose a template' },
+  { title: 'Research baseline evaluation', firstStep: 'Open vscode and edit tasks' },
+  { title: 'Study for midterm', firstStep: 'Gather slides' },
+]
+
+function greeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning.'
+  if (hour < 18) return 'Good afternoon.'
+  return 'Good evening.'
+}
+
+function formattedDate() {
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date())
 }
 
 export default function Today() {
   const navigate = useNavigate()
   const { startSession } = useFocusSession()
+  const [plan, setPlan] = useState(() => loadDayPlan())
+  const [editingId, setEditingId] = useState(null)
+  const [stepDraft, setStepDraft] = useState('')
+  const [notice, setNotice] = useState('')
 
-  // "Start 5 min" hands the anchor to the focus session, then opens the timer
-  // with it already counting down.
+  const landed = plan.anchors.filter((anchor) => anchor.completed).length
+  const nextAnchor = plan.anchors.find((anchor) => !anchor.completed)
+
   function startFocus(anchor) {
-    startSession({ task: anchor.task, step: anchor.step, minutes: 5 })
+    setPlan(updateTodayAnchor(anchor.id, {
+      startedAt: anchor.startedAt || new Date().toISOString(),
+    }))
+    startSession({ task: anchor.title, step: anchor.firstStep, minutes: 5 })
     navigate('/timer')
   }
 
+  function loadSampleAnchors() {
+    const stamp = Date.now()
+    setPlan(saveDayPlan({
+      ...plan,
+      anchors: SAMPLE_ANCHORS.map((anchor, index) => ({
+        id: `sample-${stamp}-${index}`,
+        title: anchor.title,
+        firstStep: anchor.firstStep,
+        source: 'sample',
+        completed: false,
+        startedAt: null,
+      })),
+    }))
+    setNotice('Loaded three sample Anchors. Start a briefing to replace them.')
+  }
+
+  function toggleComplete(anchor) {
+    const completed = !anchor.completed
+    setPlan(updateTodayAnchor(anchor.id, {
+      completed,
+      completedAt: completed ? new Date().toISOString() : null,
+    }))
+  }
+
+  function markStarted(anchor) {
+    if (anchor.startedAt) return
+    setPlan(updateTodayAnchor(anchor.id, { startedAt: new Date().toISOString() }))
+    setNotice(`Starting “${anchor.title}” counts.`)
+  }
+
+  function editFirstStep(anchor) {
+    setEditingId(anchor.id)
+    setStepDraft(anchor.firstStep)
+  }
+
+  function saveFirstStep(event, anchorId) {
+    event.preventDefault()
+    const firstStep = stepDraft.trim()
+    if (!firstStep) return
+    setPlan(updateTodayAnchor(anchorId, { firstStep }))
+    setEditingId(null)
+    setStepDraft('')
+  }
+
+  function moveToTomorrow(anchor) {
+    setPlan(moveAnchorToTomorrow(anchor.id))
+    setEditingId(null)
+    setNotice(`Moved “${anchor.title}” to tomorrow without judgment.`)
+  }
+
+  const greetingSummary = nextAnchor
+    ? `Anchor ${plan.anchors.indexOf(nextAnchor) + 1} is next: “${nextAnchor.firstStep}.” 2 events on the calendar.`
+    : plan.anchors.length
+      ? 'You landed every remaining Anchor. Anything else is extra.'
+      : 'Nothing planned yet. Start a morning briefing to pick your three.'
+
   return (
-    <div className="screen">
-      <div className="card-sage">
-        <div className="eyebrow">Monday, July 27</div>
-        <h1 style={{ fontSize: 'var(--fs-greeting)', margin: '6px 0' }}>Good morning.</h1>
-        <p style={{ margin: 0, color: 'var(--ink-soft)' }}>
-          Nothing planned yet. Start a morning briefing to pick your three.
-        </p>
-      </div>
+    <div className="screen today-screen">
+      <section className="card-sage today-greeting">
+        <p className="eyebrow">{formattedDate()}</p>
+        <h1>{greeting()}</h1>
+        <p>{greetingSummary}</p>
+      </section>
 
-      {/* Sample task card — demonstrates the .task-card styles against the Figma design. */}
-      <div className="card task-card">
-        <div className="task-head">
-          <span className="task-num">1</span>
-          <span className="task-title">{SAMPLE_ANCHOR.task}</span>
-          <button className="task-check" type="button" aria-label="Mark landed" />
-        </div>
-        <div className="task-step">
-          <span className="task-step-pill">First step</span>
-          <span className="task-step-text">{SAMPLE_ANCHOR.step}</span>
-          <button className="task-step-edit" type="button" aria-label="Edit first step">
-            <EditIcon size={13} />
-          </button>
-        </div>
-        <div className="task-actions">
-          <button className="btn-primary" type="button" onClick={() => startFocus(SAMPLE_ANCHOR)}>
-            Start 5 min
-          </button>
-          <button className="btn-ghost" type="button">I started</button>
-          <button className="btn-ghost" type="button">
-            <RepeatIcon size={12} />
-            Tomorrow
-          </button>
-        </div>
-      </div>
+      <button
+        className="today-briefing-button"
+        type="button"
+        onClick={() => navigate('/briefing')}
+      >
+        <span>
+          <strong>{plan.anchors.length ? 'Adjust morning briefing' : 'Start morning briefing'}</strong>
+          <small>{plan.anchors.length ? 'Review today’s plan' : 'Add today’s tasks'}</small>
+        </span>
+        <span className="today-briefing-arrow" aria-hidden="true">›</span>
+      </button>
 
-      <Placeholder
-        title="Today's anchors"
-        note="Three checkable anchors, each with an editable first step."
-      />
+      {notice && (
+        <div className="today-notice" role="status">
+          <span>{notice}</span>
+          <button type="button" aria-label="Dismiss message" onClick={() => setNotice('')}>×</button>
+        </div>
+      )}
+
+      <section className="today-anchors">
+        <div className="today-anchors-heading">
+          <h2>Today’s anchors</h2>
+          <span>{landed} of {plan.anchors.length || 3} landed</span>
+        </div>
+
+        {plan.anchors.length === 0 && (
+          <div className="today-empty-anchors">
+            <span aria-hidden="true">1 · 2 · 3</span>
+            <strong>Your Anchors will live here.</strong>
+            <p>Choose one to three things worth returning to today.</p>
+            <button className="btn-ghost today-sample-button" type="button" onClick={loadSampleAnchors}>
+              Try sample Anchors
+            </button>
+          </div>
+        )}
+
+        <div className="today-anchor-list">
+          {plan.anchors.map((anchor, index) => (
+            <article
+              className={`card task-card${anchor.completed ? ' task-card-complete' : ''}`}
+              key={anchor.id}
+            >
+              <div className="task-head">
+                <span className="task-num">{index + 1}</span>
+                <span className="task-title">{anchor.title}</span>
+                <button
+                  className="task-check"
+                  type="button"
+                  aria-label={anchor.completed ? `Mark ${anchor.title} unfinished` : `Mark ${anchor.title} landed`}
+                  aria-pressed={anchor.completed}
+                  onClick={() => toggleComplete(anchor)}
+                >
+                  {anchor.completed && <span aria-hidden="true">✓</span>}
+                </button>
+              </div>
+
+              {editingId === anchor.id ? (
+                <form className="task-step-form" onSubmit={(event) => saveFirstStep(event, anchor.id)}>
+                  <label htmlFor={`first-step-${anchor.id}`}>First step</label>
+                  <input
+                    id={`first-step-${anchor.id}`}
+                    type="text"
+                    value={stepDraft}
+                    autoFocus
+                    onChange={(event) => setStepDraft(event.target.value)}
+                  />
+                  <div>
+                    <button type="submit" disabled={!stepDraft.trim()}>Save</button>
+                    <button type="button" onClick={() => setEditingId(null)}>Cancel</button>
+                    <button
+                      type="button"
+                      className="step-suggest-btn"
+                      onClick={() =>
+                        setStepDraft(nextFirstStep(anchor.title, anchor.source, stepDraft))
+                      }
+                    >
+                      Try another
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="task-step">
+                  <span className="task-step-pill">First step</span>
+                  <span className="task-step-text">{anchor.firstStep}</span>
+                  <button
+                    className="task-step-edit"
+                    type="button"
+                    aria-label={`Edit first step for ${anchor.title}`}
+                    onClick={() => editFirstStep(anchor)}
+                  >
+                    <EditIcon size={13} />
+                  </button>
+                </div>
+              )}
+
+              <div className="task-actions">
+                <button className="btn-primary" type="button" onClick={() => startFocus(anchor)}>
+                  Start 5 min
+                </button>
+                <button
+                  className={`btn-ghost${anchor.startedAt ? ' active' : ''}`}
+                  type="button"
+                  aria-pressed={Boolean(anchor.startedAt)}
+                  onClick={() => markStarted(anchor)}
+                >
+                  {anchor.startedAt ? 'Started ✓' : 'I started'}
+                </button>
+                <button className="btn-ghost" type="button" onClick={() => moveToTomorrow(anchor)}>
+                  <RepeatIcon size={12} />
+                  Tomorrow
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="today-info-list">
         <h3 className="today-info-title">Things due today</h3>
