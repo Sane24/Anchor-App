@@ -1,41 +1,56 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabaseClient'
 
-export default function Auth({ onLogin }) {
-    const [isSignUp, setIsSignUp] = useState(false)
+export default function Auth() {
+    const [isSignUp, setIsSignUp] = useState(true)
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('') // NEW — holds our own error message
     const navigate = useNavigate()
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
 
-        // NEW — our own check, same as before
         const isValidEmail = email.includes('@') && email.includes('.')
         if (!isValidEmail) {
             setError('Please enter a valid email address.')
-            return // stop here, don't sign in/up
+            return
         }
-        setError('') // clear any old error
+        setError('')
 
-        try {
-            const displayName = isSignUp && name.trim()
-                ? name.trim()
-                : (email ? email.split('@')[0] : 'User')
+        if (isSignUp) {
+            // Create a new account. `options.data` stores extra info
+            // alongside the account — here, the name they typed.
+            const { error: signUpError } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: { full_name: name.trim() || email.split('@')[0] },
+                },
+            })
 
-            localStorage.setItem('userName', displayName)
-
-            if (typeof onLogin === 'function') {
-                onLogin(displayName)
+            if (signUpError) {
+                setError(signUpError.message)
+                return
             }
+        } else {
+            // Check email+password against the real account
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            })
 
-            navigate('/')
-        } catch (err) {
-            console.error('Login error:', err)
-            navigate('/')
+            if (signInError) {
+                setError(signInError.message)
+                return
+            }
         }
+
+        // Success — App.jsx will pick up the new session automatically
+        // (we're wiring that part next), so we just close the form here.
+        navigate('/')
     }
 
     return (
