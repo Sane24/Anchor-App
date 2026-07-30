@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import AmbientSoundSheet from './AmbientSoundSheet'
+import { useAmbientSound } from '../hooks/useAmbientSound'
 import { AnchorMark, SpeakerIcon, SunIcon } from './icons'
 
 export default function AppHeader() {
@@ -8,9 +9,13 @@ export default function AppHeader() {
   const [soundOpen, setSoundOpen] = useState(false)
   const [sound, setSound] = useState('None')
 
+  useAmbientSound(sound)
+
   // In Figma the sound button only appears on the Focus Sprint screen, and this
-  // header renders on every tab — so it stays scoped to /timer.
-  const showSound = pathname === '/timer'
+  // header renders on every tab — so it stays scoped to /timer. It also stays
+  // put while a sound is playing, otherwise leaving /timer would strand audio
+  // with no way to switch it off.
+  const showSound = pathname === '/timer' || sound !== 'None'
 
   function chooseSound(option) {
     setSound(option)
