@@ -61,6 +61,38 @@ export const RepeatIcon = ({ size = 12 }) => (
 )
 
 // The Anchor logo mark: a sprouting anchor on a theme-colored disc.
+// Exported from the Figma Focus Sprint frame (node 61:387). Keeps that file's
+// geometry exactly; only the hardcoded #2A2A24 became currentColor so it picks
+// up the surrounding text colour like the other icons here.
+export const SpeakerIcon = ({ size = 17 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 17 17"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <path
+      d="M6.375 5.66667H3.54167C3.15073 5.66667 2.83333 5.98406 2.83333 6.375V10.625C2.83333 11.0159 3.15073 11.3333 3.54167 11.3333H6.375L9.91667 14.1667V2.83333L6.375 5.66667V5.66667"
+      fill="currentColor"
+    />
+    <path
+      d="M11.6875 6.72917C12.5163 7.76428 12.5163 9.23572 11.6875 10.2708"
+      stroke="currentColor"
+      strokeWidth="1.275"
+      strokeLinecap="round"
+    />
+    <path
+      d="M13.4583 5.3125C14.875 7.20139 14.875 9.79861 13.4583 11.6875"
+      stroke="currentColor"
+      strokeWidth="1.275"
+      strokeLinecap="round"
+      opacity="0.6"
+    />
+  </svg>
+)
+
 export const AnchorMark = ({ size = 38 }) => (
   <svg
     width={size}

@@ -45,6 +45,27 @@
   place-items: center;
 }
 
+/* 13px matches the gap between the two header buttons in the Figma frame. */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+/* Ambient-sound button, Focus Sprint only (Figma node 61:386). */
+.header-sound {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  padding: 0;
+  border: none;
+  background: var(--pill);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
 /* Screen body */
 
 .screen {
