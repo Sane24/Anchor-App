@@ -11,8 +11,12 @@ Need Node 18+ installed.
 
 ```bash
 npm install
+cp .env.example .env    # first time only — Google sign-in needs this
 npm run dev
 ```
+
+`.env` is gitignored, so everyone makes their own. Skip it and the app still
+runs — Settings just says Google isn't set up, and briefing manual entry works.
 
 Open the URL it prints (usually http://localhost:5173). Use your browser's
 device toolbar at ~390px wide as this is a mobile app.
