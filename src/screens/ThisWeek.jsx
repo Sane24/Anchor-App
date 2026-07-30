@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getWeekData } from './weekSampleData'
 import '../styles/week.css'
 
-// date helpers 
+// date helpers
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+// Where a day heading settles when you jump to it — clears the sticky strip.
+// Keep in sync with --week-jump-offset in week.css.
+const JUMP_OFFSET = 92
 
 function toKey(d) {
   const y = d.getFullYear()
@@ -34,6 +38,10 @@ function dayLabel(date) {
   return date.toLocaleDateString(undefined, { weekday: 'long' })
 }
 
+function monthDay(date) {
+  return date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
+}
+
 function formatTime(t) {
   if (!t) return ''
   const [h, m] = t.split(':').map(Number)
@@ -42,17 +50,26 @@ function formatTime(t) {
   return m === 0 ? `${hr} ${ampm}` : `${hr}:${String(m).padStart(2, '0')} ${ampm}`
 }
 
+function scrollStyle() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+}
+
 const SOURCE_LABEL = { gmail: 'Gmail', calendar: 'Calendar', manual: 'Added by you' }
 
 // screen
 
 export default function ThisWeek() {
   const days = useMemo(nextSevenDays, [])
-  const [selected, setSelected] = useState(days[0].key)
+  const [activeKey, setActiveKey] = useState(days[0].key)
   const [data, setData] = useState(null)
   const [status, setStatus] = useState('loading') // loading | ready | error
   const [detailTask, setDetailTask] = useState(null)
   const [briefingOpen, setBriefingOpen] = useState(false)
+
+  // The whole week is on the page at once; these let the strip jump to a day
+  // and let the scroll position say which chip is current.
+  const sectionRefs = useRef({})
+  const stripRef = useRef(null)
 
   function load() {
     setStatus('loading')
@@ -82,14 +99,63 @@ export default function ThisWeek() {
     return map
   }, [data])
 
-  const selectedDay = days.find((d) => d.key === selected)
-  const dayTasks = tasksByDay[selected] || []
-  const dayEvents = eventsByDay[selected] || []
   const openCount = (key) =>
     (tasksByDay[key] || []).filter((t) => !t.completed).length
 
+  // Highlight the day you're actually looking at: the last heading that has
+  // passed under the strip wins.
+  useEffect(() => {
+    if (status !== 'ready') return undefined
+    let frame = 0
+
+    function measure() {
+      frame = 0
+      const marker = JUMP_OFFSET + 12
+      let current = days[0].key
+      for (const { key } of days) {
+        const top = sectionRefs.current[key]?.getBoundingClientRect().top
+        if (top != null && top <= marker) current = key
+      }
+      setActiveKey(current)
+    }
+
+    function onScroll() {
+      if (!frame) frame = requestAnimationFrame(measure)
+    }
+
+    measure()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [status, days])
+
+  // Keep the current chip in view as the week scrolls past it. Only moves when
+  // the chip would be off-screen, so the strip doesn't drift while you read.
+  useEffect(() => {
+    const strip = stripRef.current
+    const chip = strip?.querySelector(`[data-day="${activeKey}"]`)
+    if (!strip || !chip) return
+
+    const left = chip.offsetLeft - strip.scrollLeft
+    if (left >= 0 && left + chip.offsetWidth <= strip.clientWidth) return
+
+    strip.scrollTo({
+      left: chip.offsetLeft - (strip.clientWidth - chip.offsetWidth) / 2,
+      behavior: scrollStyle(),
+    })
+  }, [activeKey])
+
+  const jumpToDay = useCallback((key) => {
+    setActiveKey(key)
+    sectionRefs.current[key]?.scrollIntoView({ behavior: scrollStyle(), block: 'start' })
+  }, [])
+
   return (
-    <div className="screen">
+    <div className="screen week-screen">
       <h2 className="screen-title">This Week</h2>
 
       {/* Weekly briefing entry point */}
@@ -121,8 +187,8 @@ export default function ThisWeek() {
                 type="button"
                 className="week-briefing-row"
                 onClick={() => {
-                  setSelected(key)
                   setBriefingOpen(false)
+                  jumpToDay(key)
                 }}
               >
                 <span className="week-briefing-day">{dayLabel(date)}</span>
@@ -136,25 +202,27 @@ export default function ThisWeek() {
         </div>
       )}
 
-      {/* 7-day strip */}
-      <div className="day-strip" role="tablist" aria-label="Days of the week">
-        {days.map(({ key, date }) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={key === selected}
-            className={key === selected ? 'day-chip selected' : 'day-chip'}
-            onClick={() => setSelected(key)}
-          >
-            <span className="day-chip-dow">{DOW[date.getDay()]}</span>
-            <span className="day-chip-num">{date.getDate()}</span>
-            <span
-              className={openCount(key) > 0 ? 'day-chip-dot' : 'day-chip-dot hidden'}
-            />
-          </button>
-        ))}
-      </div>
+      {/* 7-day strip — jumps down the week, doesn't filter it */}
+      <nav className="day-strip" ref={stripRef} aria-label="Jump to a day">
+        {days.map(({ key, date }) => {
+          const n = openCount(key)
+          return (
+            <button
+              key={key}
+              type="button"
+              data-day={key}
+              aria-current={key === activeKey ? 'true' : undefined}
+              aria-label={`${dayLabel(date)}, ${monthDay(date)}${n > 0 ? `, ${n} open` : ''}`}
+              className={key === activeKey ? 'day-chip selected' : 'day-chip'}
+              onClick={() => jumpToDay(key)}
+            >
+              <span className="day-chip-dow">{DOW[date.getDay()]}</span>
+              <span className="day-chip-num">{date.getDate()}</span>
+              <span className={n > 0 ? 'day-chip-dot' : 'day-chip-dot hidden'} />
+            </button>
+          )
+        })}
+      </nav>
 
       {/* Loading state */}
       {status === 'loading' && (
@@ -177,73 +245,85 @@ export default function ThisWeek() {
         </div>
       )}
 
-      {/* Day content */}
+      {/* The whole week, in order */}
       {status === 'ready' && (
-        <>
-          <div className="eyebrow">
-            {dayLabel(selectedDay.date)} ·{' '}
-            {selectedDay.date.toLocaleDateString(undefined, {
-              month: 'long',
-              day: 'numeric',
-            })}
-          </div>
+        <div className="week-days">
+          {days.map(({ key, date }, index) => {
+            const dayTasks = tasksByDay[key] || []
+            const dayEvents = eventsByDay[key] || []
 
-          {dayTasks.length === 0 && dayEvents.length === 0 ? (
-            <div className="card week-empty">
-              <strong>Nothing scheduled.</strong>
-              <p className="week-state-note">
-                A clear day. Anything you land is a bonus.
-              </p>
-            </div>
-          ) : (
-            <>
-              {dayTasks.length > 0 && (
-                <section className="week-section">
-                  <h3 className="week-section-title">Due this day</h3>
-                  {dayTasks.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className="card week-task"
-                      onClick={() => setDetailTask(t)}
-                    >
-                      <span
-                        className={
-                          t.completed ? 'week-task-title done' : 'week-task-title'
-                        }
-                      >
-                        {t.title}
-                      </span>
-                      <span className="week-task-meta">
-                        <span className={`source-tag source-${t.source}`}>
-                          {SOURCE_LABEL[t.source]}
-                        </span>
-                        <span className="week-task-time">
-                          due {formatTime(t.dueTime)}
-                        </span>
-                      </span>
-                    </button>
-                  ))}
-                </section>
-              )}
+            return (
+              <section
+                key={key}
+                className={index === 0 ? 'week-day week-day-today' : 'week-day'}
+                ref={(el) => {
+                  sectionRefs.current[key] = el
+                }}
+                aria-label={`${dayLabel(date)}, ${monthDay(date)}`}
+              >
+                <div className="week-day-head">
+                  <h3 className="week-day-title">{dayLabel(date)}</h3>
+                  <span className="week-day-date">{monthDay(date)}</span>
+                </div>
 
-              {dayEvents.length > 0 && (
-                <section className="week-section">
-                  <h3 className="week-section-title">On the calendar</h3>
-                  {dayEvents.map((e) => (
-                    <div key={e.id} className="card week-event">
-                      <span className="week-event-time">
-                        {formatTime(e.start)}
-                        {e.end !== e.start && ` – ${formatTime(e.end)}`}
-                      </span>
-                      <span className="week-event-title">{e.title}</span>
-                    </div>
-                  ))}
-                </section>
-              )}
-            </>
-          )}
-        </>
+                {dayTasks.length === 0 && dayEvents.length === 0 ? (
+                  <p className="week-day-clear">Nothing scheduled — a clear day.</p>
+                ) : (
+                  <>
+                    {dayTasks.length > 0 && (
+                      <section className="week-section">
+                        <h4 className="week-section-title">Due</h4>
+                        {dayTasks.map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            className="card week-task"
+                            onClick={() => setDetailTask(t)}
+                          >
+                            <span
+                              className={
+                                t.completed ? 'week-task-title done' : 'week-task-title'
+                              }
+                            >
+                              {t.title}
+                            </span>
+                            <span className="week-task-meta">
+                              <span className={`source-tag source-${t.source}`}>
+                                {SOURCE_LABEL[t.source]}
+                              </span>
+                              <span className="week-task-time">
+                                due {formatTime(t.dueTime)}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </section>
+                    )}
+
+                    {dayEvents.length > 0 && (
+                      <section className="week-section">
+                        <h4 className="week-section-title">On the calendar</h4>
+                        {dayEvents.map((e) => (
+                          <div key={e.id} className="card week-event">
+                            <span className="week-event-time">
+                              {formatTime(e.start)}
+                              {e.end !== e.start && ` – ${formatTime(e.end)}`}
+                            </span>
+                            <span className="week-event-title">{e.title}</span>
+                          </div>
+                        ))}
+                      </section>
+                    )}
+                  </>
+                )}
+
+                {index === days.length - 1 && (
+                  <p className="week-end">That's the week ahead.</p>
+                )}
+              </section>
+            )
+          })}
+        </div>
       )}
 
       {/* Task detail */}

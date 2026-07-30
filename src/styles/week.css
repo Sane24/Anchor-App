@@ -1,7 +1,7 @@
-/* this week screen styles. — Reed
+/* this week screen styles.
    uses tokens from tokens.css no hardcoded hex
 
-/* ---------- weekly briefing card ---------- */
+/* weekly briefing card */
 
 .week-briefing-text {
     margin: 6px 0 14px;
@@ -54,13 +54,27 @@
     font-size: var(--fs-small);
   }
   
-  /* ---------- 7-day strip ---------- */
-  
+  /* How far below the viewport top a day heading lands when you jump to it.
+     ThisWeek.jsx reads the same number as JUMP_OFFSET. */
+  .week-screen {
+    --week-jump-offset: 92px;
+  }
+
+  /* ---------- 7-day strip ----------
+     A jump navigator, not a filter: the whole week is always rendered below.
+     Sticks to the top so it stays reachable while you scroll the week. */
+
   .day-strip {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     display: flex;
     gap: 8px;
     overflow-x: auto;
-    padding: 2px 2px 6px;
+    margin: 0 calc(var(--pad) * -1);
+    padding: 8px var(--pad) 10px;
+    background: var(--page);
+    border-bottom: 1px solid var(--line);
     scrollbar-width: none;
   }
   
@@ -114,19 +128,83 @@
     visibility: hidden;
   }
   
-  /* ---------- sections ---------- */
-  
+  /* the week, one day after another */
+
+  .week-days {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  .week-day {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-margin-top: var(--week-jump-offset);
+  }
+
+  /* Enough room under the last day that every chip can scroll its heading
+     to the top, otherwise jumping to the end lands short. */
+  .week-day:last-child {
+    min-height: calc(100vh - var(--week-jump-offset) - var(--tabbar-h) - 24px);
+  }
+
+  .week-day-head {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .week-day-title {
+    font-size: var(--fs-title);
+  }
+
+  .week-day-today .week-day-title {
+    color: var(--green);
+  }
+
+  .week-day-date {
+    color: var(--ink-soft);
+    font-size: var(--fs-small);
+  }
+
+  .week-day-clear {
+    margin: 0;
+    padding: 1px 0 2px;
+    color: var(--ink-soft);
+    font-size: var(--fs-small);
+  }
+
+  /* Sits right under the last day; the room the tail leaves below it is what
+     lets the final chip scroll its heading to the top. */
+  .week-end {
+    margin: 10px 0 0;
+    color: var(--ink-soft);
+    font-size: var(--fs-small);
+    text-align: center;
+  }
+
+  /* sections */
+
   .week-section {
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
-  
+
+  /* Quiet label inside a day — the day heading above it carries the weight. */
   .week-section-title {
-    font-size: var(--fs-title);
+    margin: 2px 0 0;
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink-eyebrow);
   }
   
-  /* ---------- task rows ---------- */
+  /* task rows */
   
   .week-task {
     display: flex;
