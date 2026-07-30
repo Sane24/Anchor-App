@@ -91,6 +91,7 @@ const SOURCE_STEPS = {
 
 const GENERIC_STEPS = [
   'Open what you need and work for 5 minutes',
+  'Start with the first two minutes',
   'Put everything you need in front of you',
 ]
 
