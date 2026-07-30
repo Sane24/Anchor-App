@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom'
+import { useState } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import AppHeader from './components/AppHeader'
 import TabBar from './components/TabBar'
 import TimerPopup from './components/TimerPopup'
@@ -10,20 +11,38 @@ import Reflection from './screens/Reflection'
 import Settings from './screens/Settings'
 import Briefing from './screens/Briefing'
 import Timer from './screens/Timer'
+import Auth from './screens/Auth'
 
 export default function App() {
+  const [user, setUser] = useState(null) // null = nobody signed in
+
+  // If nobody is signed in, only show the Auth screen —
+  // any other URL gets redirected back to /auth
+  if (!user) {
+    return (
+      <div className="app">
+        <Routes>
+          <Route path="/auth" element={<Auth onLogin={setUser} />} />
+          <Route path="*" element={<Navigate to="/auth" replace />} />
+        </Routes>
+      </div>
+    )
+  }
+
+  // Only reached once `user` is set — the real app
   return (
     <FocusSessionProvider>
       <div className="app">
-        <AppHeader />
+        <AppHeader user={user} />
         <Routes>
           <Route path="/" element={<Today />} />
           <Route path="/garden" element={<Garden />} />
           <Route path="/week" element={<ThisWeek />} />
           <Route path="/reflection" element={<Reflection />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/settings" element={<Settings user={user} onLogout={() => setUser(null)} />} />
           <Route path="/briefing" element={<Briefing />} />
           <Route path="/timer" element={<Timer />} />
+          <Route path="/auth" element={<Navigate to="/" replace />} />
         </Routes>
         <TimerPopup />
         <TabBar />

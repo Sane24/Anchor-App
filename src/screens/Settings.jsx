@@ -37,12 +37,42 @@ function GoogleConnection() {
   )
 }
 
-export default function Settings() {
+export default function Settings({ user, onLogout }) {
   const [themeId, setThemeId] = useThemeColor()
+  const [hovering, setHovering] = useState(false)
 
   return (
     <div className="screen">
       <h2 className="screen-title">Settings</h2>
+
+      <div className="card">
+        <p className="eyebrow">Account</p>
+        {user ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ margin: 0, fontWeight: 600 }}>{user}</p>
+            <button
+              type="button"
+              onClick={onLogout}
+              onMouseEnter={() => setHovering(true)}
+              onMouseLeave={() => setHovering(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                color: hovering ? '#b06a5f' : '#e53e3e',
+                fontWeight: 600,
+                fontSize: '14px',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <p className="card-section-note">Not signed in.</p>
+        )}
+      </div>
 
       <div className="card">
         <h3 className="card-section-title">Appearance</h3>
@@ -74,7 +104,7 @@ export default function Settings() {
           <GoogleConnection />
         ) : (
           <p className="card-section-note">
-            Google sign-in isn’t set up on this machine. Copy <code>.env.example</code> to{' '}
+            Google sign-in isn't set up on this machine. Copy <code>.env.example</code> to{' '}
             <code>.env</code>, then restart the dev server. Manual planning in the briefing
             works without it.
           </p>

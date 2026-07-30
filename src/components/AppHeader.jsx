@@ -4,7 +4,7 @@ import AmbientSoundSheet from './AmbientSoundSheet'
 import { useAmbientSound } from '../hooks/useAmbientSound'
 import { AnchorMark, SpeakerIcon, SunIcon } from './icons'
 
-export default function AppHeader() {
+export default function AppHeader({ user }) {
   const { pathname } = useLocation()
   const [soundOpen, setSoundOpen] = useState(false)
   const [sound, setSound] = useState('None')
@@ -36,6 +36,12 @@ export default function AppHeader() {
         </div>
 
         <div className="header-actions">
+          {user && (
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-color, #4a4a4a)' }}>
+              {user}
+            </span>
+          )}
+
           {showSound && (
             <button
               className="header-sound"
