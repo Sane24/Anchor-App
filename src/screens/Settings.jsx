@@ -7,7 +7,7 @@ import {
   isGoogleConfigured,
 } from '../data/googleAuth'
 import { useThemeColor, colorThemes } from '../hooks/useThemeColor'
-
+import NotificationSettings from '../components/NotificationSettings'
 // Kept in its own component so useGoogleConnect only runs when a client ID
 // exists. Hooks can't be called conditionally, but an unrendered component
 // never calls them at all — and calling this one without an ID throws inside
@@ -163,6 +163,9 @@ export default function Settings({ user, onLogout }) {
         </div>
       </div>
 
+
+      <NotificationSettings />
+      
       <div className="card">
         <p className="eyebrow">Connections</p>
         <p>Pulls calendar events and unread email as tasks.</p>
