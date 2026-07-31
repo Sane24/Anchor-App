@@ -38,6 +38,17 @@ export default function Auth() {
 
         // password rules
         if (isSignUp) {
+            const trimmedName = name.trim()
+
+            if (!trimmedName) {
+                setError('Please enter your name.')
+                return
+            }
+
+            if (/\s/.test(trimmedName)) {
+                setError('Your name cannot contain spaces.')
+                return
+            }
             const hasMinLength = password.length >= 8
             const hasUppercase = /[A-Z]/.test(password)
             const hasNumber = /[0-9]/.test(password)
@@ -162,10 +173,9 @@ export default function Auth() {
                             </label>
                             <input
                                 type="text"
-                                placeholder="Your Name"
+                                placeholder="John Doe"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                required={isSignUp}
                                 style={{
                                     padding: '10px 14px',
                                     borderRadius: '10px',
