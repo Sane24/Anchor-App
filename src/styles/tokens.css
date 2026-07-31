@@ -11,8 +11,11 @@
 
   /* Ink */
   --ink: #2C3122;          /* primary text */
-  --ink-soft: #83836F;     /* secondary text */
-  --ink-eyebrow: #67724F;  /* small caps labels */
+  /* Darkened from #83836F / #67724F to clear WCAG AA (4.5:1) for body text on
+     --page, --card and --tabbar. The old pair sat at 3.3–4.4:1, which put every
+     tab-bar label and all secondary copy below the line. Same hue, ~15% darker. */
+  --ink-soft: #6D6D5C;     /* secondary text */
+  --ink-eyebrow: #606A49;  /* small caps labels */
 
   /* Accent */
   --green: #44512E;        /* primary buttons, active state */
