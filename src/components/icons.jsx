@@ -60,6 +60,12 @@ export const RepeatIcon = ({ size = 12 }) => (
   </svg>
 )
 
+export const TrashIcon = ({ size = 12 }) => (
+  <svg {...base(size)} aria-hidden="true">
+    <path d="M4 6.5h16M9.5 6.5V4.5h5v2M6.5 6.5 7.5 20h9l1-13.5" />
+  </svg>
+)
+
 // The Anchor logo mark: a sprouting anchor on a theme-colored disc.
 // Exported from the Figma Focus Sprint frame (node 61:387). Keeps that file's
 // geometry exactly; only the hardcoded #2A2A24 became currentColor so it picks
