@@ -2,14 +2,65 @@ import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
+// One sheet, four modes:
+//   signin / signup — the usual pair
+//   forgot          — ask for a reset link
+//   reset           — set a new password, reached from that emailed link
+//                     (App.jsx sends us here on Supabase's PASSWORD_RECOVERY)
+
+const COPY = {
+  signin: { title: 'Welcome Back', sub: 'Sign in to access your day', submit: 'Sign In' },
+  signup: { title: 'Create Account', sub: 'Sign up to start your journey', submit: 'Sign Up' },
+  forgot: { title: 'Reset your password', sub: 'We’ll email you a link to set a new one', submit: 'Send reset link' },
+  reset: { title: 'Set a new password', sub: 'Almost there — pick something you’ll remember', submit: 'Save password' },
+}
+
+// Same rule for sign-up and for resetting. Returns a message, or null if fine.
+function validatePassword(password) {
+  const ok =
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  return ok
+    ? null
+    : 'Password must be at least 8 characters and include an uppercase letter, a number, and a symbol.'
+}
+
+function validateEmail(email) {
+  return email.includes('@') && email.includes('.')
+    ? null
+    : 'Please enter a valid email address.'
+}
+
+// The form is noValidate: inputs keep type="email"/"password" so phones show
+// the right keyboard, but the messages come from the validators above rather
+// than the browser's native popup, whose wording differs per browser.
+//
+// Where Supabase should send people back to after they click the emailed link.
+// Read from the live URL so it works on localhost and under the GitHub Pages
+// subpath without being hardcoded. The hash is excluded, which is what we want.
+function redirectTarget() {
+  return window.location.origin + window.location.pathname
+}
+
 export default function Auth() {
-    const [isSignUp, setIsSignUp] = useState(true)
+    const navigate = useNavigate()
+    const location = useLocation()
+
+    const [mode, setMode] = useState(location.state?.reset ? 'reset' : 'signup')
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
-    const [error, setError] = useState('') // NEW — holds our own error message
-    const navigate = useNavigate()
-    const location = useLocation()
+    const [confirm, setConfirm] = useState('')
+    const [error, setError] = useState('')
+    const [sent, setSent] = useState(false)
+    const [busy, setBusy] = useState(false)
+
+    // A recovery link can land while the sheet is already open.
+    useEffect(() => {
+        if (location.state?.reset) setMode('reset')
+    }, [location.state])
 
     // Signing in is optional, so this screen always needs a way out. Go back to
     // wherever they came from; if /auth was opened directly there is no history
@@ -27,273 +78,231 @@ export default function Auth() {
         return () => window.removeEventListener('keydown', onKey)
     }, [close])
 
+    function switchMode(next) {
+        setMode(next)
+        setError('')
+        setSent(false)
+        setPassword('')
+        setConfirm('')
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault()
+        setError('')
 
+        /* ---- set a new password (arrived from the email link) ---- */
+        if (mode === 'reset') {
+            const passwordError = validatePassword(password)
+            if (passwordError) return setError(passwordError)
+            if (password !== confirm) return setError('Those two passwords don’t match.')
 
-        if (isSignUp) {
-            const trimmedName = name.trim()
+            setBusy(true)
+            const { error: updateError } = await supabase.auth.updateUser({ password })
+            setBusy(false)
+            if (updateError) return setError(updateError.message)
 
-            // name rules
-            if (!trimmedName) {
-                setError('Please enter your name.')
-                return
-            }
-
-            if (/\s/.test(trimmedName)) {
-                setError('Your name cannot contain spaces.')
-                return
-            }
-        }
-
-        // email rules
-        const isValidEmail = email.includes('@') && email.includes('.')
-        if (!isValidEmail) {
-            setError('Please enter a valid email address.')
+            // The recovery link already signed them in, so there's nowhere to
+            // send them but into the app.
+            navigate('/')
             return
         }
 
-        // password rules
-        if (isSignUp) {
-            const trimmedName = name.trim()
+        /* ---- ask for a reset link ---- */
+        if (mode === 'forgot') {
+            const emailError = validateEmail(email)
+            if (emailError) return setError(emailError)
 
-            if (!trimmedName) {
-                setError('Please enter your name.')
-                return
+            setBusy(true)
+            const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: redirectTarget(),
+            })
+            setBusy(false)
+
+            // Rate limiting is about our mail sender, not about who has an
+            // account, so it's safe — and much less confusing — to say it out
+            // loud. Every other failure stays hidden behind the same
+            // confirmation, since "no such account" would let anyone check who
+            // has one.
+            if (resetError?.status === 429) {
+                return setError('Too many requests just now. Wait a minute and try again.')
             }
 
-            if (/\s/.test(trimmedName)) {
-                setError('Your name cannot contain spaces.')
-                return
-            }
-
-            const isValidEmail = email.includes('@') && email.includes('.')
-            if (!isValidEmail) {
-                setError('Please enter a valid email address.')
-                return
-            }
-
-            const hasMinLength = password.length >= 8
-            const hasUppercase = /[A-Z]/.test(password)
-            const hasNumber = /[0-9]/.test(password)
-            const hasSymbol = /[^A-Za-z0-9]/.test(password)
-
-            if (!hasMinLength || !hasUppercase || !hasNumber || !hasSymbol) {
-                setError('Password must be at least 8 characters and include an uppercase letter, a number, and a symbol.')
-                return
-            }
+            setSent(true)
+            return
         }
-        setError('')
 
-        if (isSignUp) {
-            // Create a new account. `options.data` stores extra info
-            // alongside the account — here, the name they typed.
+        /* ---- sign up ---- */
+        if (mode === 'signup') {
+            const trimmedName = name.trim()
+            if (!trimmedName) return setError('Please enter your name.')
+            if (/\s/.test(trimmedName)) return setError('Your name cannot contain spaces.')
+
+            const emailError = validateEmail(email)
+            if (emailError) return setError(emailError)
+
+            const passwordError = validatePassword(password)
+            if (passwordError) return setError(passwordError)
+
+            setBusy(true)
             const { error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
-                options: {
-                    data: { full_name: name.trim() || email.split('@')[0] },
-                },
+                options: { data: { full_name: trimmedName } },
             })
+            setBusy(false)
+            if (signUpError) return setError(signUpError.message)
 
-            if (signUpError) {
-                setError(signUpError.message)
-                return
-            }
-        } else {
-            // Check email+password against the real account
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            })
-
-            if (signInError) {
-                setError(signInError.message)
-                return
-            }
+            navigate('/')
+            return
         }
 
-        // Success — App.jsx will pick up the new session automatically
-        // (we're wiring that part next), so we just close the form here.
+        /* ---- sign in ---- */
+        const emailError = validateEmail(email)
+        if (emailError) return setError(emailError)
+
+        setBusy(true)
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        setBusy(false)
+        if (signInError) return setError(signInError.message)
+
         navigate('/')
     }
 
+    const copy = COPY[mode]
+
     return (
         <div
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 9999,
-                padding: '16px',
-            }}
+            className="auth-backdrop"
             // Clicking the backdrop dismisses; the guard keeps clicks inside the
             // card from bubbling up and closing it.
             onClick={(event) => {
                 if (event.target === event.currentTarget) close()
             }}
         >
-            <div
-                style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '20px',
-                    padding: '28px 24px',
-                    width: '100%',
-                    maxWidth: '340px',
-                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)',
-                    fontFamily: 'system-ui, -apple-system, sans-serif',
-                    position: 'relative',
-                }}
-            >
-                <button
-                    type="button"
-                    onClick={close}
-                    aria-label="Close sign in"
-                    style={{
-                        position: 'absolute',
-                        top: '12px',
-                        right: '12px',
-                        width: '32px',
-                        height: '32px',
-                        display: 'grid',
-                        placeItems: 'center',
-                        background: 'none',
-                        border: 'none',
-                        borderRadius: '50%',
-                        color: '#666666',
-                        fontSize: '20px',
-                        lineHeight: 1,
-                        cursor: 'pointer',
-                        padding: 0,
-                    }}
-                >
+            <div className="auth-card">
+                <button type="button" className="auth-close" onClick={close} aria-label="Close sign in">
                     ×
                 </button>
 
-                {/* Header */}
-                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                    <h2 style={{ margin: '0 0 6px 0', fontSize: '22px', color: '#1a1a1a', fontWeight: '700' }}>
-                        {isSignUp ? 'Create Account' : 'Welcome Back'}
-                    </h2>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#666666' }}>
-                        {isSignUp ? 'Sign up to start your journey' : 'Sign in to access your day'}
-                    </p>
+                <div className="auth-head">
+                    <h2>{copy.title}</h2>
+                    <p>{copy.sub}</p>
                 </div>
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {isSignUp && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <label style={{ fontSize: '11px', fontWeight: '600', color: '#555', textTransform: 'uppercase' }}>
-                                Name
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="John Doe"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                style={{
-                                    padding: '10px 14px',
-                                    borderRadius: '10px',
-                                    border: '1px solid #e2e8f0',
-                                    fontSize: '14px',
-                                    outline: 'none',
-                                    backgroundColor: '#f8fafc',
-                                }}
-                            />
-                        </div>
-                    )}
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: '600', color: '#555', textTransform: 'uppercase' }}>
-                            Email
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="name@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            style={{
-                                padding: '10px 14px',
-                                borderRadius: '10px',
-                                border: '1px solid #e2e8f0',
-                                fontSize: '14px',
-                                outline: 'none',
-                                backgroundColor: '#f8fafc',
-                            }}
-                        />
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: '600', color: '#555', textTransform: 'uppercase' }}>
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{
-                                padding: '10px 14px',
-                                borderRadius: '10px',
-                                border: '1px solid #e2e8f0',
-                                fontSize: '14px',
-                                outline: 'none',
-                                backgroundColor: '#f8fafc',
-                            }}
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        style={{
-                            marginTop: '10px',
-                            padding: '12px',
-                            backgroundColor: 'var(--green, #7c3aed)',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '10px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        {isSignUp ? 'Sign Up' : 'Sign In'}
-                    </button>
-                    {error && (
-                        <p style={{ color: '#ff9b9b', fontWeight: 'bold', textAlign: 'center', margin: 0 }}>
-                            {error}
+                {/* Reset link sent — a confirmation instead of the form. */}
+                {mode === 'forgot' && sent ? (
+                    <div className="auth-form">
+                        <p className="auth-note">
+                            If an account exists for <strong>{email}</strong>, a reset link is on
+                            its way. It expires in an hour.
                         </p>
-                    )}
-                </form>
+                        <p className="auth-note">
+                            Nothing after a minute? Check your spam folder before trying again.
+                        </p>
+                        <button type="button" className="auth-submit" onClick={() => switchMode('signin')}>
+                            Back to sign in
+                        </button>
+                    </div>
+                ) : (
+                    <form className="auth-form" onSubmit={handleSubmit} noValidate>
+                        {mode === 'signup' && (
+                            <div className="auth-field">
+                                <label htmlFor="auth-name">Name</label>
+                                <input
+                                    id="auth-name"
+                                    type="text"
+                                    placeholder="John Doe"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                />
+                            </div>
+                        )}
 
-                {/* Toggle Mode */}
-                <div style={{ marginTop: '18px', textAlign: 'center', fontSize: '13px', color: '#666' }}>
-                    {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-                    <button
-                        type="button"
-                        onClick={() => setIsSignUp(!isSignUp)}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--green, #7c3aed)',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            padding: 0,
-                            textDecoration: 'underline',
-                        }}
-                    >
-                        {isSignUp ? 'Sign In' : 'Sign Up'}
+                        {mode !== 'reset' && (
+                            <div className="auth-field">
+                                <label htmlFor="auth-email">Email</label>
+                                <input
+                                    id="auth-email"
+                                    type="email"
+                                    autoComplete="email"
+                                    placeholder="name@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                            </div>
+                        )}
 
-                    </button>
-                </div>
+                        {mode !== 'forgot' && (
+                            <div className="auth-field">
+                                <label htmlFor="auth-password">
+                                    {mode === 'reset' ? 'New password' : 'Password'}
+                                </label>
+                                <input
+                                    id="auth-password"
+                                    type="password"
+                                    autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                            </div>
+                        )}
+
+                        {mode === 'reset' && (
+                            <div className="auth-field">
+                                <label htmlFor="auth-confirm">Confirm new password</label>
+                                <input
+                                    id="auth-confirm"
+                                    type="password"
+                                    autoComplete="new-password"
+                                    placeholder="••••••••"
+                                    value={confirm}
+                                    onChange={(e) => setConfirm(e.target.value)}
+                                />
+                            </div>
+                        )}
+
+                        {mode === 'signin' && (
+                            <div className="auth-forgot-row">
+                                <button
+                                    type="button"
+                                    className="auth-link"
+                                    onClick={() => switchMode('forgot')}
+                                >
+                                    Forgot password?
+                                </button>
+                            </div>
+                        )}
+
+                        <button type="submit" className="auth-submit" disabled={busy}>
+                            {busy ? 'Working…' : copy.submit}
+                        </button>
+
+                        {error && <p className="auth-error">{error}</p>}
+                    </form>
+                )}
+
+                {/* Mode switch */}
+                {mode === 'forgot' && !sent && (
+                    <div className="auth-alt">
+                        <button type="button" className="auth-link" onClick={() => switchMode('signin')}>
+                            Back to sign in
+                        </button>
+                    </div>
+                )}
+
+                {(mode === 'signin' || mode === 'signup') && (
+                    <div className="auth-alt">
+                        {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}{' '}
+                        <button
+                            type="button"
+                            className="auth-link"
+                            onClick={() => switchMode(mode === 'signup' ? 'signin' : 'signup')}
+                        >
+                            {mode === 'signup' ? 'Sign In' : 'Sign Up'}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     )
