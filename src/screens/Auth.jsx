@@ -30,6 +30,23 @@ export default function Auth() {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
+
+        if (isSignUp) {
+            const trimmedName = name.trim()
+
+            // name rules
+            if (!trimmedName) {
+                setError('Please enter your name.')
+                return
+            }
+
+            if (/\s/.test(trimmedName)) {
+                setError('Your name cannot contain spaces.')
+                return
+            }
+        }
+
+        // email rules
         const isValidEmail = email.includes('@') && email.includes('.')
         if (!isValidEmail) {
             setError('Please enter a valid email address.')
@@ -49,6 +66,13 @@ export default function Auth() {
                 setError('Your name cannot contain spaces.')
                 return
             }
+
+            const isValidEmail = email.includes('@') && email.includes('.')
+            if (!isValidEmail) {
+                setError('Please enter a valid email address.')
+                return
+            }
+
             const hasMinLength = password.length >= 8
             const hasUppercase = /[A-Z]/.test(password)
             const hasNumber = /[0-9]/.test(password)
