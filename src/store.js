@@ -145,6 +145,17 @@ export function updateTodayAnchor(anchorId, changes) {
   })
 }
 
+// Drops an anchor from today entirely — unlike moveAnchorToTomorrow it isn't
+// carried anywhere, so callers should offer an undo (Today re-adds the object
+// it held onto) rather than a confirm dialog.
+export function removeTodayAnchor(anchorId) {
+  const current = loadDayPlan()
+  return saveDayPlan({
+    ...current,
+    anchors: current.anchors.filter((anchor) => anchor.id !== anchorId),
+  })
+}
+
 export function moveAnchorToTomorrow(anchorId) {
   const today = new Date()
   const tomorrow = new Date(today)

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { EditIcon, RepeatIcon } from '../components/icons'
+import { EditIcon, RepeatIcon, TrashIcon } from '../components/icons'
 import { useFocusSession } from '../hooks/useFocusSession'
 import {
   dayKey,
   loadDayPlan,
   moveAnchorToTomorrow,
+  removeTodayAnchor,
   saveDayPlan,
   updateTodayAnchor,
 } from '../store'
@@ -52,10 +53,13 @@ export default function Today() {
   const { startSession } = useFocusSession()
   const [plan, setPlan] = useState(() => loadDayPlan())
   const [editingId, setEditingId] = useState(null)
+  const [titleDraft, setTitleDraft] = useState('')
   const [stepDraft, setStepDraft] = useState('')
   const [notice, setNotice] = useState('')
   const [newTitle, setNewTitle] = useState('')
   const [week, setWeek] = useState(null)
+  // The last removed anchor, kept only in memory so the notice can put it back.
+  const [undoRemoved, setUndoRemoved] = useState(null)
 
   // Today's rows come from the same source as This Week, so the two screens
   // can't disagree about what's due.
@@ -136,27 +140,58 @@ export default function Today() {
   function markStarted(anchor) {
     if (anchor.startedAt) return
     setPlan(updateTodayAnchor(anchor.id, { startedAt: new Date().toISOString() }))
+    setUndoRemoved(null)
     setNotice(`Starting “${anchor.title}” counts.`)
   }
 
-  function editFirstStep(anchor) {
+  function editAnchor(anchor) {
     setEditingId(anchor.id)
+    setTitleDraft(anchor.title)
     setStepDraft(anchor.firstStep)
   }
 
-  function saveFirstStep(event, anchorId) {
+  function saveAnchorEdits(event, anchorId) {
     event.preventDefault()
+    const title = titleDraft.trim()
     const firstStep = stepDraft.trim()
-    if (!firstStep) return
-    setPlan(updateTodayAnchor(anchorId, { firstStep }))
+    if (!title || !firstStep) return
+    setPlan(updateTodayAnchor(anchorId, { title, firstStep }))
     setEditingId(null)
+    setTitleDraft('')
     setStepDraft('')
   }
 
   function moveToTomorrow(anchor) {
     setPlan(moveAnchorToTomorrow(anchor.id))
     setEditingId(null)
+    setUndoRemoved(null)
     setNotice(`Moved “${anchor.title}” to tomorrow without judgment.`)
+  }
+
+  // Deleting offers an undo rather than a confirm dialog: an extra "are you
+  // sure?" is friction on every removal, while undo only costs something in
+  // the rare case you didn't mean it.
+  function removeAnchor(anchor) {
+    setUndoRemoved({ anchor, index: plan.anchors.findIndex((a) => a.id === anchor.id) })
+    setPlan(removeTodayAnchor(anchor.id))
+    setEditingId(null)
+    setNotice(`Removed “${anchor.title}”.`)
+  }
+
+  function undoRemove() {
+    if (!undoRemoved) return
+    const current = loadDayPlan()
+    const anchors = [...current.anchors]
+    // Back where it was, so the numbering doesn't shuffle under you.
+    anchors.splice(Math.min(undoRemoved.index, anchors.length), 0, undoRemoved.anchor)
+    setPlan(saveDayPlan({ ...current, anchors }))
+    setUndoRemoved(null)
+    setNotice('')
+  }
+
+  function dismissNotice() {
+    setNotice('')
+    setUndoRemoved(null)
   }
 
   const today = dayKey()
@@ -199,7 +234,12 @@ export default function Today() {
       {notice && (
         <div className="today-notice" role="status">
           <span>{notice}</span>
-          <button type="button" aria-label="Dismiss message" onClick={() => setNotice('')}>×</button>
+          {undoRemoved && (
+            <button className="today-notice-undo" type="button" onClick={undoRemove}>
+              Undo
+            </button>
+          )}
+          <button type="button" aria-label="Dismiss message" onClick={dismissNotice}>×</button>
         </div>
       )}
 
@@ -253,76 +293,108 @@ export default function Today() {
               className={`card task-card${anchor.completed ? ' task-card-complete' : ''}`}
               key={anchor.id}
             >
-              <div className="task-head">
-                <span className="task-num">{index + 1}</span>
-                <span className="task-title">{anchor.title}</span>
-                <button
-                  className="task-check"
-                  type="button"
-                  aria-label={anchor.completed ? `Mark ${anchor.title} unfinished` : `Mark ${anchor.title} landed`}
-                  aria-pressed={anchor.completed}
-                  onClick={() => toggleComplete(anchor)}
-                >
-                  {anchor.completed && <span aria-hidden="true">✓</span>}
-                </button>
-              </div>
-
+              {/* Editing takes over the whole card: title, first step, and the
+                  only route to deleting. Keeping delete in here means the
+                  resting card stays calm and nothing destructive is one
+                  stray tap away. */}
               {editingId === anchor.id ? (
-                <form className="task-step-form" onSubmit={(event) => saveFirstStep(event, anchor.id)}>
+                <form className="task-step-form task-edit-form" onSubmit={(event) => saveAnchorEdits(event, anchor.id)}>
+                  <div className="task-edit-head">
+                    <span className="task-num">{index + 1}</span>
+                    <span className="eyebrow">Editing anchor</span>
+                  </div>
+
+                  <label htmlFor={`title-${anchor.id}`}>Anchor</label>
+                  <input
+                    id={`title-${anchor.id}`}
+                    type="text"
+                    value={titleDraft}
+                    autoFocus
+                    onChange={(event) => setTitleDraft(event.target.value)}
+                  />
+
                   <label htmlFor={`first-step-${anchor.id}`}>First step</label>
                   <input
                     id={`first-step-${anchor.id}`}
                     type="text"
                     value={stepDraft}
-                    autoFocus
                     onChange={(event) => setStepDraft(event.target.value)}
                   />
+
                   <div>
-                    <button type="submit" disabled={!stepDraft.trim()}>Save</button>
+                    <button type="submit" disabled={!titleDraft.trim() || !stepDraft.trim()}>
+                      Save
+                    </button>
                     <button type="button" onClick={() => setEditingId(null)}>Cancel</button>
                     <button
                       type="button"
                       className="step-suggest-btn"
                       onClick={() =>
-                        setStepDraft(nextFirstStep(anchor.title, anchor.source, stepDraft))
+                        // Uses the draft title, so renaming then asking for a
+                        // step gives suggestions that fit the new name.
+                        setStepDraft(nextFirstStep(titleDraft || anchor.title, anchor.source, stepDraft))
                       }
                     >
                       Try another
                     </button>
+                    <button
+                      type="button"
+                      className="task-edit-delete"
+                      onClick={() => removeAnchor(anchor)}
+                    >
+                      <TrashIcon size={11} />
+                      Delete
+                    </button>
                   </div>
                 </form>
               ) : (
-                <div className="task-step">
-                  <span className="task-step-pill">First step</span>
-                  <span className="task-step-text">{anchor.firstStep}</span>
-                  <button
-                    className="task-step-edit"
-                    type="button"
-                    aria-label={`Edit first step for ${anchor.title}`}
-                    onClick={() => editFirstStep(anchor)}
-                  >
-                    <EditIcon size={13} />
-                  </button>
-                </div>
-              )}
+                <>
+                  <div className="task-head">
+                    <span className="task-num">{index + 1}</span>
+                    <span className="task-title">{anchor.title}</span>
+                    <button
+                      className="task-step-edit"
+                      type="button"
+                      aria-label={`Edit ${anchor.title}`}
+                      onClick={() => editAnchor(anchor)}
+                    >
+                      <EditIcon size={13} />
+                    </button>
+                    <button
+                      className="task-check"
+                      type="button"
+                      aria-label={anchor.completed ? `Mark ${anchor.title} unfinished` : `Mark ${anchor.title} landed`}
+                      aria-pressed={anchor.completed}
+                      onClick={() => toggleComplete(anchor)}
+                    >
+                      {anchor.completed && <span aria-hidden="true">✓</span>}
+                    </button>
+                  </div>
 
-              <div className="task-actions">
-                <button className="btn-primary" type="button" onClick={() => startFocus(anchor)}>
-                  Start 5 min
-                </button>
-                <button
-                  className={`btn-ghost${anchor.startedAt ? ' active' : ''}`}
-                  type="button"
-                  aria-pressed={Boolean(anchor.startedAt)}
-                  onClick={() => markStarted(anchor)}
-                >
-                  {anchor.startedAt ? 'Started ✓' : 'I started'}
-                </button>
-                <button className="btn-ghost" type="button" onClick={() => moveToTomorrow(anchor)}>
-                  <RepeatIcon size={12} />
-                  Tomorrow
-                </button>
-              </div>
+                  <div className="task-step">
+                    <span className="task-step-pill">First step</span>
+                    <span className="task-step-text">{anchor.firstStep}</span>
+                  </div>
+
+                  <div className="task-actions">
+                    <button className="btn-primary" type="button" onClick={() => startFocus(anchor)}>
+                      Start 5 min
+                    </button>
+                    <button
+                      className={`btn-ghost${anchor.startedAt ? ' active' : ''}`}
+                      type="button"
+                      aria-pressed={Boolean(anchor.startedAt)}
+                      onClick={() => markStarted(anchor)}
+                    >
+                      {anchor.startedAt ? 'Started ✓' : 'I started'}
+                    </button>
+                    <button className="btn-ghost" type="button" onClick={() => moveToTomorrow(anchor)}>
+                      <RepeatIcon size={12} />
+                      Tomorrow
+                    </button>
+                  </div>
+                </>
+              )}
             </article>
           ))}
         </div>

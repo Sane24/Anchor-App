@@ -2547,3 +2547,43 @@
   font-size: 13px;
   color: var(--ink-soft);
 }
+
+/* Edit mode owns the whole card: title, first step, and the only way to
+   delete. Delete is muted rather than alarming — the undo in the notice
+   carries the safety, and it's already behind an explicit edit tap. */
+
+.task-edit-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.task-edit-form > input + label {
+  margin-top: 10px;
+}
+
+.task-edit-form .step-suggest-btn {
+  margin-left: 0;
+}
+
+.task-step-form button.task-edit-delete {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-soft);
+  border-color: var(--line-strong);
+}
+
+.today-notice-undo {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0 2px;
+  color: var(--green);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
