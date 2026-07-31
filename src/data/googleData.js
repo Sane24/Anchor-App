@@ -1,4 +1,5 @@
 import { getStoredGoogleToken, clearGoogleToken } from './googleAuth'
+import { looksLikeTask } from './gmailFilter'
 import { suggestFirstStep } from '../firstSteps'
 import { setImportedData } from '../screens/weekSampleData'
 
@@ -68,37 +69,56 @@ export async function fetchCalendarEvents(daysAhead = 1) {
   })
 }
 
-// Recent unread mail (minus promos/social), shaped as today-attention tasks.
+// How many surviving emails become tasks. The briefing is about choosing
+// three anchors, not mirroring an inbox.
+const MAX_MAIL_TASKS = 6
+
+// Recent unread mail from the Primary tab, sieved down to things that look
+// like a person asking for something (see gmailFilter.js), shaped as
+// today-attention tasks.
 export async function fetchGmailAsTasks() {
   if (!getStoredGoogleToken()) return []
 
-  const query = encodeURIComponent('is:unread -category:promotions -category:social')
+  // Primary tab only (Gmail's own people-vs-machine classifier does the first
+  // pass), unread, and recent — week-old unread mail is a graveyard, not a
+  // to-do list.
+  const query = encodeURIComponent('is:unread category:primary newer_than:7d')
   const list = await authFetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10&q=${query}`
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=25&q=${query}`
   )
   const ids = (list.messages || []).map((m) => m.id)
 
   const today = localDateKey(new Date())
-  return Promise.all(
+  const details = await Promise.all(
     ids.map(async (id) => {
       const detail = await authFetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}` +
+          '?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=List-Unsubscribe'
       )
       const headers = detail.payload?.headers || []
-      const subject = headers.find((h) => h.name === 'Subject')?.value || '(No subject)'
-      const from = headers.find((h) => h.name === 'From')?.value || ''
+      const header = (name) => headers.find((h) => h.name.toLowerCase() === name)?.value
       return {
-        id: `mail-${id}`,
-        title: subject,
-        from,
-        date: today,
-        dueTime: '',
-        source: 'gmail',
-        completed: false,
-        firstStep: suggestFirstStep(subject, 'gmail'),
+        id,
+        subject: header('subject') || '(No subject)',
+        from: header('from') || '',
+        hasUnsubscribe: Boolean(header('list-unsubscribe')),
       }
     })
   )
+
+  return details
+    .filter(looksLikeTask)
+    .slice(0, MAX_MAIL_TASKS)
+    .map(({ id, subject, from }) => ({
+      id: `mail-${id}`,
+      title: subject,
+      from,
+      date: today,
+      dueTime: '',
+      source: 'gmail',
+      completed: false,
+      firstStep: suggestFirstStep(subject, 'gmail'),
+    }))
 }
 
 // One scan feeds every screen: unread mail lands as today's tasks, calendar
