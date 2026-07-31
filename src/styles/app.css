@@ -1977,6 +1977,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: var(--fs-body);
 }
 
@@ -2009,6 +2011,8 @@
 }
 
 .reflect-open-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-weight: 600;
   font-size: var(--fs-body);
 }
@@ -2033,6 +2037,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--ink-soft);
   font-size: var(--fs-small);
 }
