@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { pullAndMerge, clearSyncUser } from './data/sync'
 import { subscribeToStore } from './store'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import AppHeader from './components/AppHeader'
 import TabBar from './components/TabBar'
 import TimerPopup from './components/TimerPopup'
@@ -19,6 +19,7 @@ import Timer from './screens/Timer'
 import Auth from './screens/Auth'
 
 export default function App() {
+  const navigate = useNavigate()
   const [user, setUser] = useState(null)
   // Bumped when a sync pull replaces local data, so the current screen
   // re-reads the store (it's the `key` on <Routes> below).
@@ -38,7 +39,13 @@ export default function App() {
     })
 
     // Keep `user` in sync any time auth state changes (sign in, sign out, etc.)
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      // A password-reset link opens the app at '/', where the auth sheet isn't
+      // mounted — so send them to it with the new-password form showing.
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/auth', { state: { reset: true } })
+      }
+
       if (session?.user) {
         setUser(session.user.user_metadata?.full_name || session.user.email)
         // Signing in pulls this account's data and merges it with what's on

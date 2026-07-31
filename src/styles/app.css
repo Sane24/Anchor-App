@@ -2374,3 +2374,165 @@
   display: grid;
   place-items: center;
 }
+
+/* ---------- Auth modal ----------
+   Sign in / sign up / forgot password / set new password. Token-based so the
+   sheet follows dark mode like every other surface. */
+
+.auth-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.auth-card {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  padding: 28px 24px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.18);
+}
+
+.auth-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: var(--ink-soft);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.auth-head {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.auth-head h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+
+.auth-head p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.auth-field > label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ink-eyebrow);
+}
+
+.auth-field > input {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 14px;
+  outline: none;
+}
+
+.auth-field > input::placeholder {
+  color: color-mix(in srgb, var(--ink-soft) 75%, transparent);
+}
+
+.auth-submit {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--green);
+  color: var(--green-ink);
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.auth-submit:disabled {
+  opacity: 0.55;
+}
+
+.auth-error {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #A6382E;
+}
+
+:root[data-theme='dark'] .auth-error {
+  color: #F0A9A2;
+}
+
+.auth-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* Text buttons: "Forgot password?", mode toggles, "Back to sign in". */
+.auth-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.auth-forgot-row .auth-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.auth-alt {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
