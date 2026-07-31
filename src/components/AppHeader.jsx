@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import AmbientSoundSheet from './AmbientSoundSheet'
 import { useAmbientSound } from '../hooks/useAmbientSound'
+import { useFocusSession } from '../hooks/useFocusSession'
 import { AnchorMark, MoonIcon, SpeakerIcon, SunIcon } from './icons'
 import { useDarkMode } from '../hooks/useThemeColor'
 
@@ -10,8 +11,13 @@ export default function AppHeader({ user }) {
   const [soundOpen, setSoundOpen] = useState(false)
   const [sound, setSound] = useState('None')
   const [dark, setDark] = useDarkMode()
+  const { status } = useFocusSession()
 
-  useAmbientSound(sound)
+  // Ambient sound is there to accompany focusing, so it follows the timer:
+  // pausing or finishing a sprint silences it, resuming brings it back. The
+  // choice itself is untouched, so it also plays freely before you start.
+  const silenced = status === 'paused' || status === 'done'
+  useAmbientSound(silenced ? 'None' : sound)
 
   // In Figma the sound button only appears on the Focus Sprint screen, and this
   // header renders on every tab — so it stays scoped to /timer. It also stays
