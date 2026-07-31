@@ -2604,3 +2604,87 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* ---------- Swipe rows ----------
+   Swipe left = accent "Landed" reveal on the right edge; swipe right = red
+   Delete reveal on the left. Underlays live behind the translated card. */
+
+.swipe-row {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-card-task);
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.swipe-row.swipe-dragging {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.swipe-card {
+  position: relative;
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.4, 1);
+}
+
+.swipe-dragging .swipe-card {
+  transition: none;
+}
+
+.swipe-exiting .swipe-card {
+  transition: transform 190ms ease-in;
+}
+
+.swipe-under {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  border-radius: var(--r-card-task);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.swipe-under > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  opacity: calc(0.45 + var(--swipe-progress, 0) * 0.55);
+  transform: scale(calc(0.9 + var(--swipe-progress, 0) * 0.1));
+}
+
+/* Revealed by swiping LEFT: sits on the right edge, accent colored. */
+.swipe-under-land {
+  justify-content: flex-end;
+  padding-right: 22px;
+  background: color-mix(in srgb, var(--green) 82%, var(--page));
+  color: var(--green-ink);
+}
+
+/* Revealed by swiping RIGHT: sits on the left edge, destructive red. */
+.swipe-under-delete {
+  justify-content: flex-start;
+  padding-left: 22px;
+  background: #A6382E;
+  color: #F5F2E8;
+}
+
+:root[data-theme='dark'] .swipe-under-delete {
+  background: #7E2C24;
+  color: #ECE9DE;
+}
+
+/* Release-to-act: full strength once past the threshold. */
+.swipe-armed .swipe-under-land {
+  background: var(--green);
+}
+
+.swipe-armed .swipe-under-delete {
+  background: #8F2A20;
+}
+
+:root[data-theme='dark'] .swipe-armed .swipe-under-delete {
+  background: #93362B;
+}
