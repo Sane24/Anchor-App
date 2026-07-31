@@ -97,18 +97,28 @@ export default function Briefing() {
     getWeekData()
       .then(({ tasks }) => {
         if (cancelled) return
-        const fromWeek = tasks.map((task) => ({
-          id: `week-${task.id}`,
-          title: task.title,
-          source: task.source,
-          firstStep: task.firstStep,
-          date: task.date,
-          dueTime: task.dueTime,
-          completed: task.completed,
-        }))
-        if (fromWeek.length === 0) return
+        // Anything already ticked off on This Week isn't a candidate for today.
+        const fromWeek = tasks
+          .filter((task) => !task.completed)
+          .map((task) => ({
+            id: `week-${task.id}`,
+            title: task.title,
+            source: task.source,
+            firstStep: task.firstStep,
+            date: task.date,
+            dueTime: task.dueTime,
+          }))
+        // A task saved as a candidate on an earlier visit can have been ticked
+        // off since. Drop any week item that is no longer on offer, otherwise
+        // it comes back from localStorage and outlives the filter above.
+        const liveIds = new Set(fromWeek.map((item) => item.id))
+        const isStaleWeekItem = (item) =>
+          String(item.id).startsWith('week-') && !liveIds.has(item.id)
 
-        setItems((current) => mergeCandidates(current, fromWeek))
+        setItems((current) => mergeCandidates(current.filter((i) => !isStaleWeekItem(i)), fromWeek))
+        setSelectedIds((current) =>
+          current.filter((id) => !(String(id).startsWith('week-') && !liveIds.has(id)))
+        )
         setFirstSteps((current) => {
           const next = { ...current }
           fromWeek.forEach((item) => {
