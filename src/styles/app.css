@@ -464,7 +464,8 @@
 }
 
 .today-briefing-button small {
-  color: color-mix(in srgb, var(--green-ink) 68%, transparent);
+  /* At 68% this sat at 2.5:1 on the accent fill — well under WCAG AA. */
+  color: var(--green-ink);
   font-size: 12px;
 }
 
@@ -1111,7 +1112,8 @@
   margin-top: 2px;
   font-size: 10.5px;
   letter-spacing: 0.4px;
-  color: color-mix(in srgb, var(--ink-soft) 75%, transparent);
+  /* Full strength: fading this to 75% dropped it to 4.0:1, under WCAG AA. */
+  color: var(--ink-soft);
 }
 
 .focus-ring {
