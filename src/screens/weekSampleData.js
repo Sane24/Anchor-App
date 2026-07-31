@@ -46,7 +46,17 @@ function dayOffset(offset) {
   // samples' relative dates evergreen for demos.
 
   const WEEK_USER_KEY = 'anchor_week_overrides_v1'
-  const EMPTY_USER_DATA = { samplesOn: false, edited: {}, deleted: [], added: [] }
+  const EMPTY_USER_DATA = {
+    samplesOn: false,
+    edited: {},
+    deleted: [],
+    added: [],
+    // Filled by the Google scans (data/googleData.js): unread mail as tasks,
+    // calendar entries as events. Replaced wholesale on each rescan.
+    importedTasks: [],
+    importedEvents: [],
+    scannedAt: null,
+  }
 
   function readUserData() {
     try {
@@ -67,12 +77,14 @@ function dayOffset(offset) {
 
   function userTasks() {
     const u = readUserData()
-    const samples = u.samplesOn
-      ? TASKS.filter((t) => !u.deleted.includes(t.id)).map((t) =>
-          u.edited[t.id] ? { ...t, ...u.edited[t.id] } : t
-        )
-      : []
-    return [...samples, ...u.added]
+    // Edits and deletions apply to samples and imports alike, so a renamed or
+    // dismissed email-task stays that way across rescans.
+    const applyDiffs = (list) =>
+      list
+        .filter((t) => !u.deleted.includes(t.id))
+        .map((t) => (u.edited[t.id] ? { ...t, ...u.edited[t.id] } : t))
+    const samples = u.samplesOn ? applyDiffs(TASKS) : []
+    return [...samples, ...applyDiffs(u.importedTasks), ...u.added]
   }
 
   export function samplesEnabled() {
@@ -102,10 +114,30 @@ function dayOffset(offset) {
     return task
   }
 
-  // True for tasks owned by this module (samples and user-added), as opposed
-  // to planned anchors that live in the store — decides the write path.
+  // What the Google scans found. Wholesale replacement keeps rescans
+  // idempotent; the user's edited/deleted diffs are keyed by id and survive.
+  export function setImportedData({ tasks = [], events = [] }) {
+    writeUserData({
+      ...readUserData(),
+      importedTasks: tasks,
+      importedEvents: events,
+      scannedAt: new Date().toISOString(),
+    })
+  }
+
+  export function lastScannedAt() {
+    return readUserData().scannedAt
+  }
+
+  // True for tasks owned by this module (samples, imports, user-added), as
+  // opposed to planned anchors in the store — decides the write path.
   export function isWeekTask(id) {
-    return TASKS.some((t) => t.id === id) || readUserData().added.some((t) => t.id === id)
+    const u = readUserData()
+    return (
+      TASKS.some((t) => t.id === id) ||
+      u.added.some((t) => t.id === id) ||
+      u.importedTasks.some((t) => t.id === id)
+    )
   }
 
   export function updateWeekTask(id, changes) {
@@ -145,9 +177,10 @@ function dayOffset(offset) {
   // Synchronous snapshot for refreshing a screen right after a mutation —
   // no fake latency, same shape as getWeekData resolves with.
   export function getWeekDataNow() {
+    const u = readUserData()
     return {
       tasks: mergeWithPlanned(userTasks()),
-      events: samplesEnabled() ? EVENTS : [],
+      events: [...(u.samplesOn ? EVENTS : []), ...u.importedEvents],
     }
   }
   

@@ -482,3 +482,9 @@
     text-underline-offset: 3px;
     text-decoration-color: var(--line-strong);
   }
+
+  .week-briefing-hint {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: color-mix(in srgb, var(--ink-soft) 60%, var(--ink));
+  }

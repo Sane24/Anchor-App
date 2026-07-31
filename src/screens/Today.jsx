@@ -206,8 +206,15 @@ export default function Today() {
     .filter((event) => event.date === today)
     .sort((a, b) => (a.start || '99:99').localeCompare(b.start || '99:99'))
 
+  const eventPhrase =
+    eventsToday.length === 0
+      ? 'Nothing on the calendar.'
+      : eventsToday.length === 1
+        ? '1 event on the calendar.'
+        : `${eventsToday.length} events on the calendar.`
+
   const greetingSummary = nextAnchor
-    ? `Anchor ${plan.anchors.indexOf(nextAnchor) + 1} is next: “${nextAnchor.firstStep}.” 2 events on the calendar.`
+    ? `Anchor ${plan.anchors.indexOf(nextAnchor) + 1} is next: “${nextAnchor.firstStep}.” ${eventPhrase}`
     : plan.anchors.length
       ? 'You landed every remaining Anchor. Anything else is extra.'
       : 'Nothing planned yet. Start a morning briefing to pick your three.'

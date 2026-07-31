@@ -12,6 +12,8 @@ import {
   updateWeekTask,
 } from './weekSampleData'
 import { removePlanItem, restorePlanItem, updatePlanItem } from '../store'
+import { getStoredGoogleToken } from '../data/googleAuth'
+import { scanGoogle, TokenExpiredError } from '../data/googleData'
 import '../styles/week.css'
 
 // date helpers
@@ -82,6 +84,7 @@ export default function ThisWeek() {
   const [notice, setNotice] = useState(null)
   const [briefingOpen, setBriefingOpen] = useState(false)
   const [newTask, setNewTask] = useState(() => ({ title: '', date: days[0].key }))
+  const [scanning, setScanning] = useState(false)
 
   // The whole week is on the page at once; these let the strip jump to a day
   // and let the scroll position say which chip is current.
@@ -177,6 +180,39 @@ export default function ThisWeek() {
   function closeDetail() {
     setDetailTask(null)
     setDetailMode('view')
+  }
+
+  // The weekly briefing scan: sweep the next 7 days of Calendar plus unread
+  // mail into the week, then open the day-by-day summary on the result.
+  async function startWeeklyBriefing() {
+    if (briefingOpen) {
+      setBriefingOpen(false)
+      return
+    }
+    if (!getStoredGoogleToken()) {
+      setBriefingOpen(true)
+      return
+    }
+
+    setScanning(true)
+    try {
+      const result = await scanGoogle(7)
+      setData(getWeekDataNow())
+      setNotice({
+        text: `Scanned the week: ${result.tasks} task${result.tasks === 1 ? '' : 's'} from your inbox, ${result.events} calendar event${result.events === 1 ? '' : 's'}.`,
+        undo: null,
+      })
+    } catch (err) {
+      if (err instanceof TokenExpiredError) {
+        setNotice({ text: 'Your Google session expired — reconnect in Settings.', undo: null })
+      } else {
+        console.error('Weekly scan failed:', err)
+        setNotice({ text: 'Couldn’t reach Google just now. Showing what’s saved.', undo: null })
+      }
+    } finally {
+      setScanning(false)
+      setBriefingOpen(true)
+    }
   }
 
   // Mirrors Today's "Try sample Anchors": demo data is opt-in, one tap,
@@ -289,11 +325,20 @@ export default function ThisWeek() {
         <button
           className="btn-week-primary"
           type="button"
-          onClick={() => setBriefingOpen((v) => !v)}
-          disabled={status !== 'ready'}
+          onClick={startWeeklyBriefing}
+          disabled={status !== 'ready' || scanning}
         >
-          {briefingOpen ? 'Close weekly briefing' : 'Start weekly briefing'}
+          {scanning
+            ? 'Scanning your week…'
+            : briefingOpen
+              ? 'Close weekly briefing'
+              : 'Start weekly briefing'}
         </button>
+        {!getStoredGoogleToken() && !scanning && (
+          <p className="week-briefing-hint">
+            Connect Google in Settings and this scans your real calendar and inbox.
+          </p>
+        )}
       </div>
 
       {briefingOpen && status === 'ready' && (

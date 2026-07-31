@@ -1,73 +1,117 @@
-import { getStoredGoogleToken } from './googleAuth'
+import { getStoredGoogleToken, clearGoogleToken } from './googleAuth'
+import { suggestFirstStep } from '../firstSteps'
+import { setImportedData } from '../screens/weekSampleData'
 
-// Fetch today's Calendar events
-export async function fetchCalendarEvents() {
-  const token = getStoredGoogleToken()
-  if (!token) return []
+// Google reads for the briefing scans. Everything here is read-only against
+// Calendar and Gmail; results are shaped into the week layer's task/event
+// format and handed to setImportedData, which every screen already reads.
 
-  const now = new Date()
-  const startOfDay = new Date(now.setHours(0, 0, 0, 0)).toISOString()
-  const endOfDay = new Date(now.setHours(23, 59, 59, 999)).toISOString()
-
-  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${startOfDay}&timeMax=${endOfDay}&singleEvents=true&orderBy=startTime`
-
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-
-  if (!response.ok) {
-    console.error('Calendar fetch failed:', response.status)
-    return []
+// Implicit-flow tokens die after ~an hour. A 401 means "reconnect", not
+// "there's nothing there" — so it clears the stale token and surfaces as its
+// own error type for the screens to explain.
+export class TokenExpiredError extends Error {
+  constructor() {
+    super('Google session expired')
+    this.name = 'TokenExpiredError'
   }
-
-  const data = await response.json()
-  return (data.items || []).map((event) => ({
-    id: event.id,
-    title: event.summary || '(No title)',
-    start: event.start?.dateTime || event.start?.date,
-    end: event.end?.dateTime || event.end?.date,
-  }))
 }
 
-// Fetch recent unread Gmail messages (excluding promos/social), shaped as tasks
-export async function fetchGmailAsTasks() {
+function authFetch(url) {
   const token = getStoredGoogleToken()
-  if (!token) return []
+  return fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then((response) => {
+    if (response.status === 401 || response.status === 403) {
+      clearGoogleToken()
+      throw new TokenExpiredError()
+    }
+    if (!response.ok) throw new Error(`Google request failed: ${response.status}`)
+    return response.json()
+  })
+}
+
+// Local-time date parts. toISOString would shift evening events into the
+// wrong day for anyone west of UTC.
+function localDateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function localClock(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+// Calendar entries from the start of today through `daysAhead` days.
+export async function fetchCalendarEvents(daysAhead = 1) {
+  if (!getStoredGoogleToken()) return []
+
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(start)
+  end.setDate(end.getDate() + daysAhead)
+
+  const url =
+    'https://www.googleapis.com/calendar/v3/calendars/primary/events' +
+    `?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}` +
+    '&singleEvents=true&orderBy=startTime&maxResults=50'
+
+  const data = await authFetch(url)
+  return (data.items || []).map((event) => {
+    const isAllDay = !event.start?.dateTime
+    const startAt = new Date(event.start?.dateTime || `${event.start?.date}T00:00:00`)
+    const endAt = new Date(event.end?.dateTime || `${event.end?.date}T00:00:00`)
+    return {
+      id: `gcal-${event.id}`,
+      title: event.summary || '(No title)',
+      date: localDateKey(startAt),
+      start: isAllDay ? '' : localClock(startAt),
+      end: isAllDay ? '' : localClock(endAt),
+      source: 'calendar',
+    }
+  })
+}
+
+// Recent unread mail (minus promos/social), shaped as today-attention tasks.
+export async function fetchGmailAsTasks() {
+  if (!getStoredGoogleToken()) return []
 
   const query = encodeURIComponent('is:unread -category:promotions -category:social')
-  const listUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10&q=${query}`
+  const list = await authFetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10&q=${query}`
+  )
+  const ids = (list.messages || []).map((m) => m.id)
 
-  const listResponse = await fetch(listUrl, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-
-  if (!listResponse.ok) {
-    console.error('Gmail list fetch failed:', listResponse.status)
-    return []
-  }
-
-  const listData = await listResponse.json()
-  const messageIds = (listData.messages || []).map((m) => m.id)
-
-  const tasks = await Promise.all(
-    messageIds.map(async (id) => {
-      const detailUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`
-      const detailResponse = await fetch(detailUrl, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const detail = await detailResponse.json()
+  const today = localDateKey(new Date())
+  return Promise.all(
+    ids.map(async (id) => {
+      const detail = await authFetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`
+      )
       const headers = detail.payload?.headers || []
       const subject = headers.find((h) => h.name === 'Subject')?.value || '(No subject)'
       const from = headers.find((h) => h.name === 'From')?.value || ''
-
       return {
-        id,
+        id: `mail-${id}`,
         title: subject,
         from,
+        date: today,
+        dueTime: '',
         source: 'gmail',
+        completed: false,
+        firstStep: suggestFirstStep(subject, 'gmail'),
       }
     })
   )
+}
 
-  return tasks
+// One scan feeds every screen: unread mail lands as today's tasks, calendar
+// entries land as events on their days. Rescans replace the previous import,
+// so nothing duplicates; user edits/deletions live in the week layer's diff
+// maps and survive.
+export async function scanGoogle(daysAhead = 1) {
+  if (!getStoredGoogleToken()) return { connected: false, tasks: 0, events: 0 }
+
+  const [events, tasks] = await Promise.all([
+    fetchCalendarEvents(daysAhead),
+    fetchGmailAsTasks(),
+  ])
+  setImportedData({ tasks, events })
+  return { connected: true, tasks: tasks.length, events: events.length }
 }
