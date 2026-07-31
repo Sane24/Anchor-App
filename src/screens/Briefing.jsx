@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getStoredGoogleToken } from '../data/googleAuth'
+import { scanGoogle, TokenExpiredError } from '../data/googleData'
 import { dayKey, loadDayPlan, loadJournalEntry, saveBriefingPlan } from '../store'
 import { suggestFirstStep, nextFirstStep } from '../firstSteps'
-import { getWeekData } from './weekSampleData'
+import { getWeekData, getWeekDataNow } from './weekSampleData'
 
 const FILTERS = ['all', 'manual', 'calendar', 'gmail']
 
@@ -88,61 +89,82 @@ export default function Briefing() {
   const [filter, setFilter] = useState('all')
   const [loadingImports, setLoadingImports] = useState(googleConnected)
 
+  const [scanError, setScanError] = useState(null) // 'expired' | 'failed' | null
+
+  // Today's still-open week tasks become candidates. Called on mount and
+  // again after the Google scan lands more of them.
+  function applyWeekTasks(tasks) {
+    const fromWeek = tasks
+      .filter((task) => !task.completed && task.date === dayKey())
+      .map((task) => ({
+        id: `week-${task.id}`,
+        title: task.title,
+        source: task.source,
+        firstStep: task.firstStep,
+        date: task.date,
+        dueTime: task.dueTime,
+      }))
+    // A task saved as a candidate on an earlier visit can have been ticked
+    // off since. Drop any week item that is no longer on offer, otherwise
+    // it comes back from localStorage and outlives the filter above.
+    const liveIds = new Set(fromWeek.map((item) => item.id))
+    const isStaleWeekItem = (item) =>
+      String(item.id).startsWith('week-') && !liveIds.has(item.id)
+
+    setItems((current) => mergeCandidates(current.filter((i) => !isStaleWeekItem(i)), fromWeek))
+    setSelectedIds((current) =>
+      current.filter((id) => !(String(id).startsWith('week-') && !liveIds.has(id)))
+    )
+    setFirstSteps((current) => {
+      const next = { ...current }
+      fromWeek.forEach((item) => {
+        if (!next[item.id]) {
+          next[item.id] = item.firstStep || suggestFirstStep(item.title, item.source)
+        }
+      })
+      return next
+    })
+  }
+
   // The possibilities list is today's slice of This Week: a morning briefing
   // decides what matters *today*, so items due on other days stay on the week
   // screen where looking ahead belongs.
   useEffect(() => {
     let cancelled = false
-
     getWeekData()
       .then(({ tasks }) => {
-        if (cancelled) return
-        // Only today's still-open tasks are candidates.
-        const fromWeek = tasks
-          .filter((task) => !task.completed && task.date === dayKey())
-          .map((task) => ({
-            id: `week-${task.id}`,
-            title: task.title,
-            source: task.source,
-            firstStep: task.firstStep,
-            date: task.date,
-            dueTime: task.dueTime,
-          }))
-        // A task saved as a candidate on an earlier visit can have been ticked
-        // off since. Drop any week item that is no longer on offer, otherwise
-        // it comes back from localStorage and outlives the filter above.
-        const liveIds = new Set(fromWeek.map((item) => item.id))
-        const isStaleWeekItem = (item) =>
-          String(item.id).startsWith('week-') && !liveIds.has(item.id)
-
-        setItems((current) => mergeCandidates(current.filter((i) => !isStaleWeekItem(i)), fromWeek))
-        setSelectedIds((current) =>
-          current.filter((id) => !(String(id).startsWith('week-') && !liveIds.has(id)))
-        )
-        setFirstSteps((current) => {
-          const next = { ...current }
-          fromWeek.forEach((item) => {
-            if (!next[item.id]) {
-              next[item.id] = item.firstStep || suggestFirstStep(item.title, item.source)
-            }
-          })
-          return next
-        })
+        if (!cancelled) applyWeekTasks(tasks)
       })
       .catch((err) => {
         console.error('Could not load this week for the briefing:', err)
       })
-
     return () => {
       cancelled = true
     }
   }, [])
 
-  // Calendar and Gmail are no longer fetched straight into this list. They
-  // reach it through This Week, which is the screen that owns those imports —
-  // pulling them in again here is what put unrelated tasks in the list.
+  // The actual morning scan: starting a briefing sweeps today's calendar and
+  // unread mail into the week layer, and the fresh slice flows in above.
   useEffect(() => {
-    if (googleConnected) setLoadingImports(false)
+    if (!googleConnected) return undefined
+    let cancelled = false
+
+    scanGoogle(1)
+      .then(() => {
+        if (!cancelled) applyWeekTasks(getWeekDataNow().tasks)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setScanError(err instanceof TokenExpiredError ? 'expired' : 'failed')
+        console.error('Morning scan failed:', err)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingImports(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [googleConnected])
 
   const visibleItems = items
@@ -284,7 +306,25 @@ export default function Briefing() {
           </div>
         )}
 
-        {loadingImports && <p className="briefing-status">Gathering Google items…</p>}
+        {loadingImports && (
+          <div className="briefing-scanning" role="status">
+            <span className="briefing-scanning-dot" aria-hidden="true" />
+            Scanning your inbox and calendar…
+          </div>
+        )}
+
+        {scanError && (
+          <div className="briefing-connection">
+            <span>
+              {scanError === 'expired'
+                ? 'Your Google session expired.'
+                : 'Couldn’t reach Google just now.'}
+            </span>
+            <button type="button" onClick={() => navigate('/settings')}>
+              {scanError === 'expired' ? 'Reconnect in Settings' : 'Check Settings'}
+            </button>
+          </div>
+        )}
 
         {!loadingImports && visibleItems.length === 0 && (
           <div className="briefing-empty">
