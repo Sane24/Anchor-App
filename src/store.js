@@ -145,6 +145,31 @@ export function updateTodayAnchor(anchorId, changes) {
   })
 }
 
+// Edit an item on any day's plan — This Week's detail dialog reaches items on
+// future dates. Patches whichever list holds it (anchors or rollover).
+export function updatePlanItem(date, itemId, changes) {
+  const plan = loadDayPlan(date)
+  const patch = (list) => list.map((item) => (item.id === itemId ? { ...item, ...changes } : item))
+  return saveDayPlan({ ...plan, anchors: patch(plan.anchors), rollover: patch(plan.rollover) }, date)
+}
+
+// Puts a removed item back on its day (undo for removePlanItem). It returns
+// to the anchors list regardless of origin — same day, same display.
+export function restorePlanItem(date, item) {
+  const plan = loadDayPlan(date)
+  if (plan.anchors.some((a) => a.id === item.id) || plan.rollover.some((r) => r.id === item.id)) {
+    return plan
+  }
+  return saveDayPlan({ ...plan, anchors: [...plan.anchors, item] }, date)
+}
+
+// Remove an item from any day's plan. Callers offer undo, not a confirm.
+export function removePlanItem(date, itemId) {
+  const plan = loadDayPlan(date)
+  const drop = (list) => list.filter((item) => item.id !== itemId)
+  return saveDayPlan({ ...plan, anchors: drop(plan.anchors), rollover: drop(plan.rollover) }, date)
+}
+
 // Drops an anchor from today entirely — unlike moveAnchorToTomorrow it isn't
 // carried anywhere, so callers should offer an undo (Today re-adds the object
 // it held onto) rather than a confirm dialog.

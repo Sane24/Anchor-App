@@ -3,6 +3,7 @@
 // Keep the shape of getWeekData()'s return value the same when swapping.
 
 import { loadAllDayPlans } from '../store'
+import { suggestFirstStep } from '../firstSteps'
 
 // Dates are generated relative to "today" so the screen always has live-looking data.
 function dayOffset(offset) {
@@ -36,6 +37,119 @@ function dayOffset(offset) {
   
   // Flip to true (or add ?fail to the URL) to preview the error state.
   const SIMULATE_ERROR = false
+
+  // ---------- the user's week data ----------
+  // The samples above are opt-in demo content, off by default — the week
+  // starts as a blank page. Everything the user does lives in one diff layer:
+  // whether samples are loaded, edits/deletions applied to them, and tasks
+  // they added themselves. Diffs (rather than rewriting the list) keep the
+  // samples' relative dates evergreen for demos.
+
+  const WEEK_USER_KEY = 'anchor_week_overrides_v1'
+  const EMPTY_USER_DATA = { samplesOn: false, edited: {}, deleted: [], added: [] }
+
+  function readUserData() {
+    try {
+      const raw = localStorage.getItem(WEEK_USER_KEY)
+      return raw ? { ...EMPTY_USER_DATA, ...JSON.parse(raw) } : { ...EMPTY_USER_DATA }
+    } catch {
+      return { ...EMPTY_USER_DATA }
+    }
+  }
+
+  function writeUserData(data) {
+    try {
+      localStorage.setItem(WEEK_USER_KEY, JSON.stringify(data))
+    } catch (err) {
+      console.error('Could not save week task changes:', err)
+    }
+  }
+
+  function userTasks() {
+    const u = readUserData()
+    const samples = u.samplesOn
+      ? TASKS.filter((t) => !u.deleted.includes(t.id)).map((t) =>
+          u.edited[t.id] ? { ...t, ...u.edited[t.id] } : t
+        )
+      : []
+    return [...samples, ...u.added]
+  }
+
+  export function samplesEnabled() {
+    return readUserData().samplesOn
+  }
+
+  export function enableSamples() {
+    writeUserData({ ...readUserData(), samplesOn: true })
+  }
+
+  export function disableSamples() {
+    writeUserData({ ...readUserData(), samplesOn: false })
+  }
+
+  export function addWeekTask({ title, date, dueTime = '' }) {
+    const u = readUserData()
+    const task = {
+      id: `u-${Date.now()}`,
+      title,
+      date,
+      dueTime,
+      source: 'manual',
+      completed: false,
+      firstStep: suggestFirstStep(title, 'manual'),
+    }
+    writeUserData({ ...u, added: [...u.added, task] })
+    return task
+  }
+
+  // True for tasks owned by this module (samples and user-added), as opposed
+  // to planned anchors that live in the store — decides the write path.
+  export function isWeekTask(id) {
+    return TASKS.some((t) => t.id === id) || readUserData().added.some((t) => t.id === id)
+  }
+
+  export function updateWeekTask(id, changes) {
+    const u = readUserData()
+    if (u.added.some((t) => t.id === id)) {
+      writeUserData({
+        ...u,
+        added: u.added.map((t) => (t.id === id ? { ...t, ...changes } : t)),
+      })
+    } else {
+      writeUserData({ ...u, edited: { ...u.edited, [id]: { ...u.edited[id], ...changes } } })
+    }
+  }
+
+  // Returns the removed task so the caller's undo can hand it back.
+  export function deleteWeekTask(id) {
+    const u = readUserData()
+    const added = u.added.find((t) => t.id === id)
+    if (added) {
+      writeUserData({ ...u, added: u.added.filter((t) => t.id !== id) })
+      return added
+    }
+    const sample = userTasks().find((t) => t.id === id)
+    if (!u.deleted.includes(id)) writeUserData({ ...u, deleted: [...u.deleted, id] })
+    return sample
+  }
+
+  export function restoreWeekTask(task) {
+    const u = readUserData()
+    if (String(task.id).startsWith('u-')) {
+      writeUserData({ ...u, added: [...u.added, task] })
+    } else {
+      writeUserData({ ...u, deleted: u.deleted.filter((x) => x !== task.id) })
+    }
+  }
+
+  // Synchronous snapshot for refreshing a screen right after a mutation —
+  // no fake latency, same shape as getWeekData resolves with.
+  export function getWeekDataNow() {
+    return {
+      tasks: mergeWithPlanned(userTasks()),
+      events: samplesEnabled() ? EVENTS : [],
+    }
+  }
   
   // Anchors you planned or postponed live in the store, not in the list above.
   // Without this they never reach This Week, so "Tomorrow" on a Today card
@@ -93,7 +207,7 @@ function dayOffset(offset) {
         if (forceFail) {
           reject(new Error('Could not load your week'))
         } else {
-          resolve({ tasks: mergeWithPlanned(TASKS), events: EVENTS })
+          resolve(getWeekDataNow())
         }
       }, 700) // fake network latency so the loading state is visible
     })

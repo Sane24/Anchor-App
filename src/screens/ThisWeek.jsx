@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getWeekData } from './weekSampleData'
+import {
+  addWeekTask,
+  deleteWeekTask,
+  enableSamples,
+  disableSamples,
+  getWeekData,
+  getWeekDataNow,
+  isWeekTask,
+  restoreWeekTask,
+  updateWeekTask,
+} from './weekSampleData'
+import { removePlanItem, restorePlanItem, updatePlanItem } from '../store'
 import '../styles/week.css'
 
 // date helpers
@@ -64,6 +75,10 @@ export default function ThisWeek() {
   const [data, setData] = useState(null)
   const [status, setStatus] = useState('loading') // loading | ready | error
   const [detailTask, setDetailTask] = useState(null)
+  const [detailMode, setDetailMode] = useState('view') // view | edit
+  const [draft, setDraft] = useState({ title: '', firstStep: '', dueTime: '', date: '' })
+  // { text, undo } — undo restores whatever was just deleted.
+  const [notice, setNotice] = useState(null)
   const [briefingOpen, setBriefingOpen] = useState(false)
 
   // The whole week is on the page at once; these let the strip jump to a day
@@ -156,6 +171,82 @@ export default function ThisWeek() {
     setActiveKey(key)
     sectionRefs.current[key]?.scrollIntoView({ behavior: scrollStyle(), block: 'start' })
   }, [])
+
+  function closeDetail() {
+    setDetailTask(null)
+    setDetailMode('view')
+  }
+
+  function openEdit() {
+    setDraft({
+      title: detailTask.title,
+      firstStep: detailTask.firstStep || '',
+      dueTime: detailTask.dueTime || '',
+      date: detailTask.date,
+    })
+    setDetailMode('edit')
+  }
+
+  // Two write paths: sample tasks change through the overrides layer;
+  // planned anchors change in the store, so Today and the briefing follow.
+  function saveEdits(event) {
+    event.preventDefault()
+    const title = draft.title.trim()
+    if (!title) return
+
+    if (isWeekTask(detailTask.id)) {
+      updateWeekTask(detailTask.id, {
+        title,
+        firstStep: draft.firstStep.trim(),
+        dueTime: draft.dueTime,
+        date: draft.date || detailTask.date,
+      })
+    } else {
+      updatePlanItem(detailTask.date, detailTask.id, {
+        title,
+        firstStep: draft.firstStep.trim(),
+      })
+    }
+    setData(getWeekDataNow())
+    closeDetail()
+  }
+
+  function deleteTask() {
+    const task = detailTask
+    if (isWeekTask(task.id)) {
+      const removed = deleteWeekTask(task.id)
+      setNotice({
+        text: `Removed “${task.title}”.`,
+        undo: () => {
+          if (removed) restoreWeekTask(removed)
+          setData(getWeekDataNow())
+          setNotice(null)
+        },
+      })
+    } else {
+      // Keep the fields the plan actually stores, so undo puts back a clean
+      // anchor rather than the week-view row shape.
+      const planItem = {
+        id: task.id,
+        title: task.title,
+        firstStep: task.firstStep,
+        source: task.source,
+        completed: task.completed,
+        startedAt: null,
+      }
+      removePlanItem(task.date, task.id)
+      setNotice({
+        text: `Removed “${task.title}”.`,
+        undo: () => {
+          restorePlanItem(task.date, planItem)
+          setData(getWeekDataNow())
+          setNotice(null)
+        },
+      })
+    }
+    setData(getWeekDataNow())
+    closeDetail()
+  }
 
   return (
     <div className="screen week-screen">
@@ -331,11 +422,24 @@ export default function ThisWeek() {
         </div>
       )}
 
+      {/* Removed-task notice, with the way back */}
+      {notice && (
+        <div className="today-notice week-notice" role="status">
+          <span>{notice.text}</span>
+          {notice.undo && (
+            <button className="today-notice-undo" type="button" onClick={notice.undo}>
+              Undo
+            </button>
+          )}
+          <button type="button" aria-label="Dismiss message" onClick={() => setNotice(null)}>×</button>
+        </div>
+      )}
+
       {/* Task detail */}
       {detailTask && (
         <div
           className="week-detail-backdrop"
-          onClick={() => setDetailTask(null)}
+          onClick={closeDetail}
           role="presentation"
         >
           <div
@@ -345,26 +449,90 @@ export default function ThisWeek() {
             aria-label="Task details"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="eyebrow">
-              {SOURCE_LABEL[detailTask.source]}
-              {detailTask.dueTime ? ` · due ${formatTime(detailTask.dueTime)}` : ''}
-            </div>
-            <h3 className="week-detail-title">{detailTask.title}</h3>
-            {detailTask.completed ? (
-              <p className="week-state-note">Landed. Nice.</p>
+            {detailMode === 'edit' ? (
+              <form className="week-detail-form" onSubmit={saveEdits}>
+                <div className="eyebrow">Editing task</div>
+
+                <label htmlFor="week-edit-title">Task</label>
+                <input
+                  id="week-edit-title"
+                  type="text"
+                  value={draft.title}
+                  autoFocus
+                  onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                />
+
+                <label htmlFor="week-edit-step">First step</label>
+                <input
+                  id="week-edit-step"
+                  type="text"
+                  value={draft.firstStep}
+                  onChange={(e) => setDraft({ ...draft, firstStep: e.target.value })}
+                />
+
+                {/* Day and due time only exist on week tasks; planned anchors
+                    are day-intentions without a clock time. */}
+                {isWeekTask(detailTask.id) && (
+                  <>
+                    <label htmlFor="week-edit-date">Day</label>
+                    <input
+                      id="week-edit-date"
+                      type="date"
+                      value={draft.date}
+                      min={days[0].key}
+                      max={days[days.length - 1].key}
+                      onChange={(e) => setDraft({ ...draft, date: e.target.value })}
+                    />
+
+                    <label htmlFor="week-edit-time">Due time</label>
+                    <input
+                      id="week-edit-time"
+                      type="time"
+                      value={draft.dueTime}
+                      onChange={(e) => setDraft({ ...draft, dueTime: e.target.value })}
+                    />
+                  </>
+                )}
+
+                <div className="week-detail-actions">
+                  <button className="btn-week-primary" type="submit" disabled={!draft.title.trim()}>
+                    Save
+                  </button>
+                  <button className="btn-ghost" type="button" onClick={() => setDetailMode('view')}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
             ) : (
-              <div className="week-detail-step">
-                <span className="week-detail-step-pill">First step</span>
-                <span>{detailTask.firstStep}</span>
-              </div>
+              <>
+                <div className="eyebrow">
+                  {SOURCE_LABEL[detailTask.source]}
+                  {detailTask.dueTime ? ` · due ${formatTime(detailTask.dueTime)}` : ''}
+                </div>
+                <h3 className="week-detail-title">{detailTask.title}</h3>
+                {detailTask.completed ? (
+                  <p className="week-state-note">Landed. Nice.</p>
+                ) : (
+                  <div className="week-detail-step">
+                    <span className="week-detail-step-pill">First step</span>
+                    <span>{detailTask.firstStep}</span>
+                  </div>
+                )}
+                <div className="week-detail-actions">
+                  <button className="btn-week-primary" type="button" onClick={closeDetail}>
+                    Close
+                  </button>
+                  {!detailTask.completed && (
+                    <button className="btn-ghost" type="button" onClick={openEdit}>
+                      Edit
+                    </button>
+                  )}
+                  <button className="btn-ghost week-detail-delete" type="button" onClick={deleteTask}>
+                    Delete
+                  </button>
+                </div>
+              </>
             )}
-            <button
-              className="btn-week-primary"
-              type="button"
-              onClick={() => setDetailTask(null)}
-            >
-              Close
-            </button>
           </div>
         </div>
       )}

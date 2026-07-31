@@ -359,3 +359,56 @@
     color: var(--ink-eyebrow);
     white-space: nowrap;
   }
+  /* ---------- detail dialog: actions + edit form ---------- */
+
+  .week-detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Delete stays quiet — it's behind an explicit tap and undone from the
+     notice, so it doesn't need to shout. */
+  .week-detail-delete {
+    margin-left: auto;
+    color: var(--ink-soft);
+    border-color: var(--line-strong);
+  }
+
+  .week-detail-form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .week-detail-form label {
+    margin-top: 8px;
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--ink-eyebrow);
+  }
+
+  .week-detail-form input {
+    padding: 10px 12px;
+    color: var(--ink);
+    background: var(--page);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    font-family: var(--body);
+    font-size: var(--fs-body);
+  }
+
+  .week-detail-form .week-detail-actions {
+    margin-top: 14px;
+  }
+
+  /* The removed-task notice borrows Today's notice styling; it just needs to
+     sit below the sticky day strip instead of the top of the scroll. */
+  .week-notice {
+    position: sticky;
+    top: calc(var(--week-jump-offset) + 4px);
+    z-index: 3;
+  }
