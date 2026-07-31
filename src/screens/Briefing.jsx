@@ -45,14 +45,13 @@ function sortKey(item) {
   return `${item.date || '9999-99-99'} ${item.dueTime || '99:99'}`
 }
 
-// "Today" for today, otherwise the weekday, matching how This Week reads.
-function dayTag(dateKey) {
-  if (!dateKey) return ''
-  if (dateKey === dayKey()) return 'Today'
-  const [year, month, day] = dateKey.split('-').map(Number)
-  return new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(
-    new Date(year, month - 1, day)
-  )
+// "15:00" -> "3 PM", matching how This Week shows due times.
+function formatDue(time) {
+  if (!time) return ''
+  const [h, m] = time.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const hr = h % 12 === 0 ? 12 : h % 12
+  return m === 0 ? `due ${hr} ${ampm}` : `due ${hr}:${String(m).padStart(2, '0')} ${ampm}`
 }
 
 function sourceName(source) {
@@ -89,17 +88,18 @@ export default function Briefing() {
   const [filter, setFilter] = useState('all')
   const [loadingImports, setLoadingImports] = useState(googleConnected)
 
-  // The possibilities list is This Week's list — the whole week, not just
-  // today, so nothing you can see on that screen is missing here.
+  // The possibilities list is today's slice of This Week: a morning briefing
+  // decides what matters *today*, so items due on other days stay on the week
+  // screen where looking ahead belongs.
   useEffect(() => {
     let cancelled = false
 
     getWeekData()
       .then(({ tasks }) => {
         if (cancelled) return
-        // Anything already ticked off on This Week isn't a candidate for today.
+        // Only today's still-open tasks are candidates.
         const fromWeek = tasks
-          .filter((task) => !task.completed)
+          .filter((task) => !task.completed && task.date === dayKey())
           .map((task) => ({
             id: `week-${task.id}`,
             title: task.title,
@@ -314,7 +314,7 @@ export default function Briefing() {
                   <span>
                     <strong>{item.title}</strong>
                     <small>
-                      {[dayTag(item.date), item.dueTime, sourceName(item.source)]
+                      {[formatDue(item.dueTime), sourceName(item.source)]
                         .filter(Boolean)
                         .join(' · ')}
                     </small>
