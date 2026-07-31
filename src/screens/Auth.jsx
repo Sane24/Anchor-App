@@ -9,28 +9,28 @@ import { supabase } from '../lib/supabaseClient'
 //                     (App.jsx sends us here on Supabase's PASSWORD_RECOVERY)
 
 const COPY = {
-  signin: { title: 'Welcome Back', sub: 'Sign in to access your day', submit: 'Sign In' },
-  signup: { title: 'Create Account', sub: 'Sign up to start your journey', submit: 'Sign Up' },
-  forgot: { title: 'Reset your password', sub: 'We’ll email you a link to set a new one', submit: 'Send reset link' },
-  reset: { title: 'Set a new password', sub: 'Almost there — pick something you’ll remember', submit: 'Save password' },
+    signin: { title: 'Welcome Back', sub: 'Sign in to access your day', submit: 'Sign In' },
+    signup: { title: 'Create Account', sub: 'Sign up to start your journey', submit: 'Sign Up' },
+    forgot: { title: 'Reset your password', sub: 'We’ll email you a link to set a new one', submit: 'Send reset link' },
+    reset: { title: 'Set a new password', sub: 'Almost there — pick something you’ll remember', submit: 'Save password' },
 }
 
 // Same rule for sign-up and for resetting. Returns a message, or null if fine.
 function validatePassword(password) {
-  const ok =
-    password.length >= 8 &&
-    /[A-Z]/.test(password) &&
-    /[0-9]/.test(password) &&
-    /[^A-Za-z0-9]/.test(password)
-  return ok
-    ? null
-    : 'Password must be at least 8 characters and include an uppercase letter, a number, and a symbol.'
+    const ok =
+        password.length >= 8 &&
+        /[A-Z]/.test(password) &&
+        /[0-9]/.test(password) &&
+        /[^A-Za-z0-9]/.test(password)
+    return ok
+        ? null
+        : 'Password must be at least 8 characters and include an uppercase letter, a number, and a symbol.'
 }
 
 function validateEmail(email) {
-  return email.includes('@') && email.includes('.')
-    ? null
-    : 'Please enter a valid email address.'
+    return email.includes('@') && email.includes('.')
+        ? null
+        : 'Please enter a valid email address.'
 }
 
 // The form is noValidate: inputs keep type="email"/"password" so phones show
@@ -41,7 +41,7 @@ function validateEmail(email) {
 // Read from the live URL so it works on localhost and under the GitHub Pages
 // subpath without being hardcoded. The hash is excluded, which is what we want.
 function redirectTarget() {
-  return window.location.origin + window.location.pathname
+    return window.location.origin + window.location.pathname
 }
 
 export default function Auth() {
@@ -56,6 +56,8 @@ export default function Auth() {
     const [error, setError] = useState('')
     const [sent, setSent] = useState(false)
     const [busy, setBusy] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
+    const [showConfirm, setShowConfirm] = useState(false)
 
     // A recovery link can land while the sheet is already open.
     useEffect(() => {
@@ -237,14 +239,37 @@ export default function Auth() {
                                 <label htmlFor="auth-password">
                                     {mode === 'reset' ? 'New password' : 'Password'}
                                 </label>
-                                <input
-                                    id="auth-password"
-                                    type="password"
-                                    autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                />
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        id="auth-password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                                        placeholder="••••••••"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        style={{ paddingRight: '48px', width: '100%', boxSizing: 'border-box' }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                        style={{
+                                            position: 'absolute',
+                                            right: '10px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                            color: 'var(--green)',
+                                            padding: 0,
+                                        }}
+                                    >
+                                        {showPassword ? 'Hide' : 'Show'}
+                                    </button>
+                                </div>
                             </div>
                         )}
 
