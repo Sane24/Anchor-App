@@ -87,7 +87,10 @@ export default function ThisWeek() {
     const map = {}
     if (!data) return map
     for (const t of data.tasks) (map[t.date] ||= []).push(t)
-    for (const k in map) map[k].sort((a, b) => a.dueTime.localeCompare(b.dueTime))
+    // Anchors carry no due time, so they sort after the timed items instead of
+    // throwing on an undefined dueTime.
+    const at = (t) => t.dueTime || '99:99'
+    for (const k in map) map[k].sort((a, b) => at(a).localeCompare(at(b)))
     return map
   }, [data])
 
@@ -291,9 +294,11 @@ export default function ThisWeek() {
                               <span className={`source-tag source-${t.source}`}>
                                 {SOURCE_LABEL[t.source]}
                               </span>
-                              <span className="week-task-time">
-                                due {formatTime(t.dueTime)}
-                              </span>
+                              {t.dueTime && (
+                                <span className="week-task-time">
+                                  due {formatTime(t.dueTime)}
+                                </span>
+                              )}
                             </span>
                           </button>
                         ))}
@@ -341,8 +346,8 @@ export default function ThisWeek() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="eyebrow">
-              {SOURCE_LABEL[detailTask.source]} · due{' '}
-              {formatTime(detailTask.dueTime)}
+              {SOURCE_LABEL[detailTask.source]}
+              {detailTask.dueTime ? ` · due ${formatTime(detailTask.dueTime)}` : ''}
             </div>
             <h3 className="week-detail-title">{detailTask.title}</h3>
             {detailTask.completed ? (
