@@ -12,6 +12,15 @@ import { nextFirstStep, suggestFirstStep } from '../firstSteps'
 
 const MAX_ANCHORS = 3
 
+// One-tap demo data for an empty day — the fastest way to see the app working
+// (and the path DEPLOY.md points graders at). Goes through the normal store,
+// so these behave exactly like real anchors.
+const SAMPLE_ANCHORS = [
+  { title: 'Design Figma prototype', firstStep: 'Open Figma and choose a template' },
+  { title: 'Research baseline evaluation', firstStep: 'Open vscode and edit tasks' },
+  { title: 'Study for midterm', firstStep: 'Gather slides' },
+]
+
 function greeting() {
   const hour = new Date().getHours()
   if (hour < 12) return 'Good morning.'
@@ -45,6 +54,22 @@ export default function Today() {
     }))
     startSession({ task: anchor.title, step: anchor.firstStep, minutes: 5 })
     navigate('/timer')
+  }
+
+  function loadSampleAnchors() {
+    const stamp = Date.now()
+    setPlan(saveDayPlan({
+      ...plan,
+      anchors: SAMPLE_ANCHORS.map((anchor, index) => ({
+        id: `sample-${stamp}-${index}`,
+        title: anchor.title,
+        firstStep: anchor.firstStep,
+        source: 'sample',
+        completed: false,
+        startedAt: null,
+      })),
+    }))
+    setNotice('Loaded three sample Anchors. Start a briefing to replace them.')
   }
 
   // Straight into today's plan, without a full briefing round trip. Calendar
@@ -149,6 +174,9 @@ export default function Today() {
             <span aria-hidden="true">1 · 2 · 3</span>
             <strong>Your Anchors will live here.</strong>
             <p>Choose one to three things worth returning to today.</p>
+            <button className="btn-ghost today-sample-button" type="button" onClick={loadSampleAnchors}>
+              Try sample Anchors
+            </button>
           </div>
         )}
 
