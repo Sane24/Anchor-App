@@ -79,10 +79,13 @@ const MAX_MAIL_TASKS = 6
 export async function fetchGmailAsTasks() {
   if (!getStoredGoogleToken()) return []
 
-  // Primary tab only (Gmail's own people-vs-machine classifier does the first
-  // pass), unread, and recent — week-old unread mail is a graveyard, not a
-  // to-do list.
-  const query = encodeURIComponent('is:unread category:primary newer_than:7d')
+  // Wider than Primary on purpose: Canvas/bCourses and friends land in the
+  // Updates tab, and that's exactly the mail a student needs surfaced. The
+  // allowlist in gmailFilter.js separates school-robot mail from the rest of
+  // the machine noise. Recent only — week-old unread mail is a graveyard.
+  const query = encodeURIComponent(
+    'is:unread newer_than:7d -category:promotions -category:social -category:forums'
+  )
   const list = await authFetch(
     `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=25&q=${query}`
   )
@@ -106,8 +109,12 @@ export async function fetchGmailAsTasks() {
     })
   )
 
-  return details
-    .filter(looksLikeTask)
+  const kept = details.filter(looksLikeTask)
+  // Tuning aid: if the scan feels wrong, this says whether the query or the
+  // filter is the one to blame.
+  console.log(`Gmail scan: ${details.length} unread fetched, ${kept.length} look like tasks`)
+
+  return kept
     .slice(0, MAX_MAIL_TASKS)
     .map(({ id, subject, from }) => ({
       id: `mail-${id}`,

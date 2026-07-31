@@ -197,11 +197,16 @@ export default function Today() {
 
   const today = dayKey()
   const anchorIds = new Set(plan.anchors.map((anchor) => anchor.id))
-  // Anchors already have their own section above, so they're left out here
-  // rather than listed twice.
+  // "Due today" means an actual deadline, so a due time is required. That
+  // keeps scanned email subjects out (they're inbox attention for the
+  // briefing, not deadlines) and timeless intentions out (that's what the
+  // anchors above are for). Anchors are also excluded to avoid double-listing.
   const dueToday = (week?.tasks || [])
-    .filter((task) => task.date === today && !task.completed && !anchorIds.has(task.id))
-    .sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'))
+    .filter(
+      (task) =>
+        task.date === today && task.dueTime && !task.completed && !anchorIds.has(task.id)
+    )
+    .sort((a, b) => a.dueTime.localeCompare(b.dueTime))
   const eventsToday = (week?.events || [])
     .filter((event) => event.date === today)
     .sort((a, b) => (a.start || '99:99').localeCompare(b.start || '99:99'))
