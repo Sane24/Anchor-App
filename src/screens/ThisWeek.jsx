@@ -4,6 +4,7 @@ import {
   deleteWeekTask,
   enableSamples,
   disableSamples,
+  samplesEnabled,
   getWeekData,
   getWeekDataNow,
   isWeekTask,
@@ -368,19 +369,22 @@ export default function ThisWeek() {
               Add
             </button>
           </div>
+          {/* Stays reachable whenever samples are off — a single anchor from
+              Today counts as a week task, so gating this on a totally empty
+              week hid it almost immediately. */}
+          {!samplesEnabled() && (
+            <button className="week-add-alt" type="button" onClick={loadSamples}>
+              or try a week of sample tasks
+            </button>
+          )}
         </form>
       )}
 
-      {/* A blank week: point at the two ways to fill it. */}
+      {/* A blank week */}
       {status === 'ready' && data.tasks.length === 0 && data.events.length === 0 && (
         <div className="card week-blank">
           <strong>Your week is a blank page.</strong>
-          <p className="week-state-note">
-            Add a task above, or look around with a week of sample data.
-          </p>
-          <button className="btn-ghost" type="button" onClick={loadSamples}>
-            Try sample tasks
-          </button>
+          <p className="week-state-note">Add a task above, or load some samples to look around.</p>
         </div>
       )}
 
@@ -427,7 +431,7 @@ export default function ThisWeek() {
                 </div>
 
                 {dayTasks.length === 0 && dayEvents.length === 0 ? (
-                  <p className="week-day-clear">Nothing scheduled — a clear day.</p>
+                  <p className="week-day-clear">Nothing scheduled.</p>
                 ) : (
                   <>
                     {dayTasks.length > 0 && (

@@ -466,3 +466,19 @@
   .week-blank .btn-ghost {
     margin-top: 8px;
   }
+
+  /* Secondary way into the sample week, matching Today's "or pick from your
+     calendar and email" link under its add form. */
+  .week-add-alt {
+    display: block;
+    margin-top: 10px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--ink-eyebrow);
+    font-size: var(--fs-small);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--line-strong);
+  }
