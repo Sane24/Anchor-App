@@ -152,9 +152,14 @@ export default function NotificationSettings() {
         </>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
-        <button type="button" className="btn-week-primary" onClick={onTest}>
-          Send test notification
+      <p className="card-section-note" style={{ marginTop: 12 }}>
+        You'll get a notification if Anchor is open at that time. If it isn't,
+        the reminder is waiting inside the app next time you open it.
+      </p>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+        <button type="button" className="step-suggest-btn" onClick={onTest}>
+          Send a test
         </button>
         {testSent && (
           <span className="card-section-note" role="status">
@@ -162,10 +167,6 @@ export default function NotificationSettings() {
           </span>
         )}
       </div>
-
-      <p className="card-section-note" style={{ marginTop: 10 }}>
-        Reminders fire while Anchor is open in a tab.
-      </p>
     </div>
   )
 }

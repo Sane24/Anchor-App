@@ -2292,3 +2292,83 @@
 :root[data-theme='dark'] .garden-immersive {
   background: linear-gradient(#1F2419, #252C1E 55%, #2F3824);
 }
+
+/* ---------- Reminder nudge ----------
+   The catch-up layer: sits above the tab bar, and above the timer popup when
+   both are up, since it's the thing asking for a decision. */
+
+.reminder-nudge {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+  z-index: 22;
+  width: min(calc(100% - 32px), 398px);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  background: var(--card-alt);
+  border: 1px solid color-mix(in srgb, var(--green) 22%, transparent);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+  animation: reminder-nudge-in 0.3s cubic-bezier(0.2, 0.8, 0.4, 1) both;
+}
+
+/* Stack above the timer popup instead of covering it. */
+.reminder-nudge:has(~ .timer-popup) {
+  bottom: calc(var(--tabbar-h) + 78px + env(safe-area-inset-bottom));
+}
+
+@keyframes reminder-nudge-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reminder-nudge-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.reminder-nudge-text strong {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.reminder-nudge-text small {
+  font-size: 12px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reminder-nudge-go {
+  flex-shrink: 0;
+  background: var(--green);
+  color: var(--green-ink);
+  border-radius: var(--r-pill);
+  padding: 7px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.reminder-nudge-close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}

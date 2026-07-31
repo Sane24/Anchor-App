@@ -6,6 +6,8 @@ import { Routes, Route } from 'react-router-dom'
 import AppHeader from './components/AppHeader'
 import TabBar from './components/TabBar'
 import TimerPopup from './components/TimerPopup'
+import ReminderNudge from './components/ReminderNudge'
+import { start as startReminders } from './notifications'
 import { FocusSessionProvider } from './hooks/useFocusSession'
 import Today from './screens/Today'
 import Garden from './screens/Garden'
@@ -21,6 +23,10 @@ export default function App() {
   // Bumped when a sync pull replaces local data, so the current screen
   // re-reads the store (it's the `key` on <Routes> below).
   const [dataVersion, setDataVersion] = useState(0)
+
+  // Poll the clock for reminder times. Safe to call repeatedly; it no-ops
+  // once the interval is running.
+  useEffect(startReminders, [])
 
   useEffect(() => {
     // Check if someone's already signed in (e.g. they refreshed the page)
@@ -67,6 +73,7 @@ export default function App() {
           <Route path="/timer" element={<Timer />} />
           <Route path="/auth" element={<Auth />} />
         </Routes>
+        <ReminderNudge />
         <TimerPopup />
         <TabBar />
       </div>
