@@ -560,8 +560,53 @@
   font-size: 12px;
 }
 
-.today-sample-button {
-  margin-top: 14px;
+/* Quick add on Today, so a first anchor doesn't require a full briefing. */
+.today-add {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+}
+
+.today-add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.today-add-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--line);
+  background: var(--page);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--fs-body);
+}
+
+.today-add-row input:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+
+.today-add-row .btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.today-add-alt {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--green);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-decoration: underline;
 }
 
 .task-card {

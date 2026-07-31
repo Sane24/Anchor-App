@@ -8,15 +8,9 @@ import {
   saveDayPlan,
   updateTodayAnchor,
 } from '../store'
-import { nextFirstStep } from '../firstSteps'
+import { nextFirstStep, suggestFirstStep } from '../firstSteps'
 
-// Lets you reach the focus timer (and demo the app) without connecting Google.
-// These go through the normal store path, so they behave like real anchors.
-const SAMPLE_ANCHORS = [
-  { title: 'Design Figma prototype', firstStep: 'Open Figma and choose a template' },
-  { title: 'Research baseline evaluation', firstStep: 'Open vscode and edit tasks' },
-  { title: 'Study for midterm', firstStep: 'Gather slides' },
-]
+const MAX_ANCHORS = 3
 
 function greeting() {
   const hour = new Date().getHours()
@@ -40,6 +34,7 @@ export default function Today() {
   const [editingId, setEditingId] = useState(null)
   const [stepDraft, setStepDraft] = useState('')
   const [notice, setNotice] = useState('')
+  const [newTitle, setNewTitle] = useState('')
 
   const landed = plan.anchors.filter((anchor) => anchor.completed).length
   const nextAnchor = plan.anchors.find((anchor) => !anchor.completed)
@@ -52,20 +47,28 @@ export default function Today() {
     navigate('/timer')
   }
 
-  function loadSampleAnchors() {
-    const stamp = Date.now()
+  // Straight into today's plan, without a full briefing round trip. Calendar
+  // and Gmail picking already lives in the briefing, so that stays a link.
+  function addAnchor(event) {
+    event.preventDefault()
+    const title = newTitle.trim()
+    if (!title || plan.anchors.length >= MAX_ANCHORS) return
+
     setPlan(saveDayPlan({
       ...plan,
-      anchors: SAMPLE_ANCHORS.map((anchor, index) => ({
-        id: `sample-${stamp}-${index}`,
-        title: anchor.title,
-        firstStep: anchor.firstStep,
-        source: 'sample',
-        completed: false,
-        startedAt: null,
-      })),
+      anchors: [
+        ...plan.anchors,
+        {
+          id: `manual-${Date.now()}`,
+          title,
+          firstStep: suggestFirstStep(title, 'manual'),
+          source: 'manual',
+          completed: false,
+          startedAt: null,
+        },
+      ],
     }))
-    setNotice('Loaded three sample Anchors. Start a briefing to replace them.')
+    setNewTitle('')
   }
 
   function toggleComplete(anchor) {
@@ -146,10 +149,34 @@ export default function Today() {
             <span aria-hidden="true">1 · 2 · 3</span>
             <strong>Your Anchors will live here.</strong>
             <p>Choose one to three things worth returning to today.</p>
-            <button className="btn-ghost today-sample-button" type="button" onClick={loadSampleAnchors}>
-              Try sample Anchors
-            </button>
           </div>
+        )}
+
+        {plan.anchors.length < MAX_ANCHORS && (
+          <form className="today-add" onSubmit={addAnchor}>
+            <label className="eyebrow" htmlFor="today-add-title">
+              Add an anchor
+            </label>
+            <div className="today-add-row">
+              <input
+                id="today-add-title"
+                type="text"
+                value={newTitle}
+                placeholder="Something worth returning to"
+                onChange={(event) => setNewTitle(event.target.value)}
+              />
+              <button className="btn-primary" type="submit" disabled={!newTitle.trim()}>
+                Add
+              </button>
+            </div>
+            <button
+              className="today-add-alt"
+              type="button"
+              onClick={() => navigate('/briefing')}
+            >
+              or pick from your calendar and email
+            </button>
+          </form>
         )}
 
         <div className="today-anchor-list">
