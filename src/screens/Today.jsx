@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EditIcon, RepeatIcon, TrashIcon } from '../components/icons'
+import SwipeRow from '../components/SwipeRow'
 import { useFocusSession } from '../hooks/useFocusSession'
 import {
   loadDayPlan,
@@ -249,9 +250,20 @@ export default function Today() {
 
         <div className="today-anchor-list">
           {plan.anchors.map((anchor, index) => (
+            <SwipeRow
+              key={anchor.id}
+              disabled={editingId === anchor.id}
+              onSwipeLeft={() => toggleComplete(anchor)}
+              onSwipeRight={() => removeAnchor(anchor)}
+              leftLabel={<span>{anchor.completed ? 'Not yet ↺' : 'Landed ✓'}</span>}
+              rightLabel={
+                <span>
+                  <TrashIcon size={13} /> Delete
+                </span>
+              }
+            >
             <article
               className={`card task-card${anchor.completed ? ' task-card-complete' : ''}`}
-              key={anchor.id}
             >
               {/* Editing takes over the whole card: title, first step, and the
                   only route to deleting. Keeping delete in here means the
@@ -356,6 +368,7 @@ export default function Today() {
                 </>
               )}
             </article>
+            </SwipeRow>
           ))}
         </div>
       </section>
