@@ -2,6 +2,8 @@
 // TEMPORARY: Madison's real Gmail/Calendar layer (src/data/) replaces this.
 // Keep the shape of getWeekData()'s return value the same when swapping.
 
+import { loadAllDayPlans } from '../store'
+
 // Dates are generated relative to "today" so the screen always has live-looking data.
 function dayOffset(offset) {
     const d = new Date()
@@ -35,6 +37,54 @@ function dayOffset(offset) {
   // Flip to true (or add ?fail to the URL) to preview the error state.
   const SIMULATE_ERROR = false
   
+  // Anchors you planned or postponed live in the store, not in the list above.
+  // Without this they never reach This Week, so "Tomorrow" on a Today card
+  // looked like it did nothing. Only gmail/calendar keep their own tag; an
+  // anchor you moved is your own task, so it reads as "Added by you".
+  function plannedTasks() {
+    const plans = loadAllDayPlans()
+    const out = []
+
+    Object.values(plans).forEach((plan) => {
+      const date = plan?.date
+      if (!date) return
+      ;[...(plan.anchors || []), ...(plan.rollover || [])].forEach((anchor) => {
+        if (!anchor?.id) return
+        const source = anchor.source === 'gmail' || anchor.source === 'calendar'
+          ? anchor.source
+          : 'manual'
+        out.push({
+          id: anchor.id,
+          title: anchor.title,
+          date,
+          dueTime: '', // an intention for the day, not a deadline
+          source,
+          completed: Boolean(anchor.completed),
+          firstStep: anchor.firstStep,
+        })
+      })
+    })
+
+    return out
+  }
+
+  // A task picked in the briefing is stored as "week-<sampleId>"; prefer that
+  // copy so its completion state shows, and drop the sample it came from.
+  function mergeWithPlanned(sampleTasks) {
+    const planned = plannedTasks()
+    const plannedIds = new Set(planned.map((t) => t.id))
+    const shadowed = new Set(
+      planned
+        .map((t) => (String(t.id).startsWith('week-') ? String(t.id).slice(5) : null))
+        .filter(Boolean)
+    )
+
+    const kept = sampleTasks.filter(
+      (t) => !plannedIds.has(t.id) && !shadowed.has(String(t.id))
+    )
+    return [...kept, ...planned]
+  }
+
   export function getWeekData() {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
@@ -43,7 +93,7 @@ function dayOffset(offset) {
         if (forceFail) {
           reject(new Error('Could not load your week'))
         } else {
-          resolve({ tasks: TASKS, events: EVENTS })
+          resolve({ tasks: mergeWithPlanned(TASKS), events: EVENTS })
         }
       }, 700) // fake network latency so the loading state is visible
     })
