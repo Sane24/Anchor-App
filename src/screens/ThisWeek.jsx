@@ -80,6 +80,7 @@ export default function ThisWeek() {
   // { text, undo } — undo restores whatever was just deleted.
   const [notice, setNotice] = useState(null)
   const [briefingOpen, setBriefingOpen] = useState(false)
+  const [newTask, setNewTask] = useState(() => ({ title: '', date: days[0].key }))
 
   // The whole week is on the page at once; these let the strip jump to a day
   // and let the scroll position say which chip is current.
@@ -175,6 +176,30 @@ export default function ThisWeek() {
   function closeDetail() {
     setDetailTask(null)
     setDetailMode('view')
+  }
+
+  // Mirrors Today's "Try sample Anchors": demo data is opt-in, one tap,
+  // and just as easy to take back.
+  function loadSamples() {
+    enableSamples()
+    setData(getWeekDataNow())
+    setNotice({
+      text: 'Loaded a sample week. Your own tasks are untouched.',
+      undo: () => {
+        disableSamples()
+        setData(getWeekDataNow())
+        setNotice(null)
+      },
+    })
+  }
+
+  function addOwnTask(event) {
+    event.preventDefault()
+    const title = newTask.title.trim()
+    if (!title) return
+    addWeekTask({ title, date: newTask.date })
+    setData(getWeekDataNow())
+    setNewTask({ title: '', date: days[0].key })
   }
 
   function openEdit() {
@@ -317,6 +342,47 @@ export default function ThisWeek() {
           )
         })}
       </nav>
+
+      {/* Get something on the week: your own task, any visible day. */}
+      {status === 'ready' && (
+        <form className="card week-add" onSubmit={addOwnTask}>
+          <label className="eyebrow" htmlFor="week-add-title">Add a task</label>
+          <div className="week-add-row">
+            <input
+              id="week-add-title"
+              type="text"
+              value={newTask.title}
+              placeholder="Something with a deadline"
+              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+            />
+            <select
+              aria-label="Which day"
+              value={newTask.date}
+              onChange={(e) => setNewTask({ ...newTask, date: e.target.value })}
+            >
+              {days.map(({ key, date }) => (
+                <option key={key} value={key}>{dayLabel(date)}</option>
+              ))}
+            </select>
+            <button className="btn-week-primary" type="submit" disabled={!newTask.title.trim()}>
+              Add
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* A blank week: point at the two ways to fill it. */}
+      {status === 'ready' && data.tasks.length === 0 && data.events.length === 0 && (
+        <div className="card week-blank">
+          <strong>Your week is a blank page.</strong>
+          <p className="week-state-note">
+            Add a task above, or look around with a week of sample data.
+          </p>
+          <button className="btn-ghost" type="button" onClick={loadSamples}>
+            Try sample tasks
+          </button>
+        </div>
+      )}
 
       {/* Loading state */}
       {status === 'loading' && (

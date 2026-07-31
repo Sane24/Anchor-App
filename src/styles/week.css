@@ -412,3 +412,57 @@
     top: calc(var(--week-jump-offset) + 4px);
     z-index: 3;
   }
+
+  /* ---------- add-a-task + blank week ---------- */
+
+  .week-add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .week-add-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 12px;
+    color: var(--ink);
+    background: var(--page);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    font-family: var(--body);
+    font-size: var(--fs-body);
+  }
+
+  .week-add-row select {
+    flex-shrink: 0;
+    max-width: 118px;
+    padding: 10px 8px;
+    color: var(--ink);
+    background: var(--page);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    font-family: var(--body);
+    font-size: var(--fs-small);
+  }
+
+  .week-add-row .btn-week-primary:disabled {
+    opacity: 0.4;
+  }
+
+  .week-blank {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 24px 20px;
+    text-align: center;
+  }
+
+  .week-blank strong {
+    font-family: var(--display);
+    font-size: var(--fs-title);
+  }
+
+  .week-blank .btn-ghost {
+    margin-top: 8px;
+  }
