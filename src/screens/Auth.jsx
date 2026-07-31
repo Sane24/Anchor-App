@@ -35,6 +35,19 @@ export default function Auth() {
             setError('Please enter a valid email address.')
             return
         }
+
+        // password rules
+        if (isSignUp) {
+            const hasMinLength = password.length >= 8
+            const hasUppercase = /[A-Z]/.test(password)
+            const hasNumber = /[0-9]/.test(password)
+            const hasSymbol = /[^A-Za-z0-9]/.test(password)
+
+            if (!hasMinLength || !hasUppercase || !hasNumber || !hasSymbol) {
+                setError('Password must be at least 8 characters and include an uppercase letter, a number, and a symbol.')
+                return
+            }
+        }
         setError('')
 
         if (isSignUp) {
