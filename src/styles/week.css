@@ -222,6 +222,7 @@
   .week-task-title {
     font-weight: 600;
     font-size: var(--fs-body);
+    overflow-wrap: anywhere;
   }
   
   .week-task-title.done {
@@ -337,6 +338,7 @@
   
   .week-detail-title {
     font-size: var(--fs-h2);
+    overflow-wrap: anywhere;
   }
   
   .week-detail-step {

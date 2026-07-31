@@ -330,6 +330,11 @@
 
 .task-title {
   flex: 1;
+  /* A flex child defaults to min-width:auto, so one long unbroken word can't
+     shrink and pushes the card — and the whole page — sideways. These two lines
+     let it shrink and break mid-word instead. */
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-weight: 600;
   font-size: var(--fs-title);
 }
@@ -368,6 +373,8 @@
 
 .task-step-text {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: var(--fs-small);
   color: var(--ink-soft);
   line-height: 1.4;
@@ -970,6 +977,7 @@
 .briefing-choice strong {
   font-size: 13.5px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .briefing-choice small {
@@ -1076,6 +1084,7 @@
 
 .focus-task {
   margin: 0;
+  overflow-wrap: anywhere;
   font-size: 20px;
   font-weight: 600;
   line-height: 24px;
@@ -1327,6 +1336,8 @@
 }
 
 .today-info-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 13.5px;
   font-weight: 500;
   line-height: 17.55px;
