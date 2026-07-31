@@ -359,3 +359,126 @@
     color: var(--ink-eyebrow);
     white-space: nowrap;
   }
+  /* ---------- detail dialog: actions + edit form ---------- */
+
+  .week-detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Delete stays quiet — it's behind an explicit tap and undone from the
+     notice, so it doesn't need to shout. */
+  .week-detail-delete {
+    margin-left: auto;
+    color: var(--ink-soft);
+    border-color: var(--line-strong);
+  }
+
+  .week-detail-form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .week-detail-form label {
+    margin-top: 8px;
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--ink-eyebrow);
+  }
+
+  .week-detail-form input {
+    padding: 10px 12px;
+    color: var(--ink);
+    background: var(--page);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    font-family: var(--body);
+    font-size: var(--fs-body);
+  }
+
+  .week-detail-form .week-detail-actions {
+    margin-top: 14px;
+  }
+
+  /* The removed-task notice borrows Today's notice styling; it just needs to
+     sit below the sticky day strip instead of the top of the scroll. */
+  .week-notice {
+    position: sticky;
+    top: calc(var(--week-jump-offset) + 4px);
+    z-index: 3;
+  }
+
+  /* ---------- add-a-task + blank week ---------- */
+
+  .week-add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .week-add-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 12px;
+    color: var(--ink);
+    background: var(--page);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    font-family: var(--body);
+    font-size: var(--fs-body);
+  }
+
+  .week-add-row select {
+    flex-shrink: 0;
+    max-width: 118px;
+    padding: 10px 8px;
+    color: var(--ink);
+    background: var(--page);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    font-family: var(--body);
+    font-size: var(--fs-small);
+  }
+
+  .week-add-row .btn-week-primary:disabled {
+    opacity: 0.4;
+  }
+
+  .week-blank {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 24px 20px;
+    text-align: center;
+  }
+
+  .week-blank strong {
+    font-family: var(--display);
+    font-size: var(--fs-title);
+  }
+
+  .week-blank .btn-ghost {
+    margin-top: 8px;
+  }
+
+  /* Secondary way into the sample week, matching Today's "or pick from your
+     calendar and email" link under its add form. */
+  .week-add-alt {
+    display: block;
+    margin-top: 10px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--ink-eyebrow);
+    font-size: var(--fs-small);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--line-strong);
+  }
