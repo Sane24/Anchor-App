@@ -55,25 +55,72 @@ export function formatTime(totalSeconds) {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-export function FocusSessionProvider({ children }) {
-  const [task, setTask] = useState('Design Figma prototype')
-  const [step, setStep] = useState('Open Figma and choose a template')
-  const [duration, setDuration] = useState(DEFAULT_SECONDS)
-  const [remaining, setRemaining] = useState(DEFAULT_SECONDS)
-  const [status, setStatus] = useState('idle') // idle | running | paused | done
+// A running timer survives a refresh by storing its wall-clock deadline rather
+// than a countdown, so time keeps passing while the tab is closed.
+const TIMER_KEY = 'anchor_focus_timer_v1'
+// Anything older than this is stale — coming back the next day should start
+// fresh, not resume yesterday's sprint or bank a session you never sat through.
+const MAX_RESTORE_AGE_MS = 12 * 60 * 60 * 1000
 
-  const [phase, setPhase] = useState('focus')
-  const [round, setRound] = useState(0) // focus rounds finished since the last long break
-  // Each phase remembers its own length, so editing the break doesn't clobber
-  // the focus length you set earlier.
-  const [phaseSeconds, setPhaseSeconds] = useState({
-    focus: PHASES.focus.defaultSeconds,
-    short: PHASES.short.defaultSeconds,
-    long: PHASES.long.defaultSeconds,
+function readSavedTimer() {
+  try {
+    const raw = localStorage.getItem(TIMER_KEY)
+    if (!raw) return null
+    const saved = JSON.parse(raw)
+    // JSON.parse('null') succeeds and returns null, so check the type too.
+    if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return null
+    if (!saved.savedAt || Date.now() - saved.savedAt > MAX_RESTORE_AGE_MS) return null
+    return saved
+  } catch (err) {
+    console.error('Could not read the saved timer:', err)
+    return null
+  }
+}
+
+// Seconds left for a restored timer: a running one keeps counting against its
+// deadline; anything else is frozen where it was left.
+function restoredRemaining(saved) {
+  if (saved.status === 'running' && saved.endAt) {
+    return Math.max(0, Math.round((saved.endAt - Date.now()) / 1000))
+  }
+  return saved.remaining ?? DEFAULT_SECONDS
+}
+
+export function FocusSessionProvider({ children }) {
+  // Restored once, before the first render, so a refresh doesn't reset the timer.
+  const [restored] = useState(readSavedTimer)
+
+  const [task, setTask] = useState(restored?.task ?? 'Design Figma prototype')
+  const [step, setStep] = useState(restored?.step ?? 'Open Figma and choose a template')
+  const [duration, setDuration] = useState(restored?.duration ?? DEFAULT_SECONDS)
+  const [remaining, setRemaining] = useState(
+    restored ? restoredRemaining(restored) : DEFAULT_SECONDS
+  )
+  // idle | running | paused | done. A run whose deadline passed while the tab
+  // was closed comes back finished, not still counting.
+  const [status, setStatus] = useState(() => {
+    if (!restored) return 'idle'
+    if (restored.status === 'running' && restoredRemaining(restored) === 0) return 'done'
+    return restored.status
   })
 
-  const endAtRef = useRef(null)
-  const startedAtRef = useRef(null)
+  const [phase, setPhase] = useState(restored?.phase ?? 'focus')
+  const [round, setRound] = useState(restored?.round ?? 0) // focus rounds since the last long break
+  // Each phase remembers its own length, so editing the break doesn't clobber
+  // the focus length you set earlier.
+  const [phaseSeconds, setPhaseSeconds] = useState(
+    restored?.phaseSeconds ?? {
+      focus: PHASES.focus.defaultSeconds,
+      short: PHASES.short.defaultSeconds,
+      long: PHASES.long.defaultSeconds,
+    }
+  )
+
+  const endAtRef = useRef(restored?.endAt ?? null)
+  const startedAtRef = useRef(restored?.startedAt ?? null)
+  // Guards against saving the same finished run twice — once before a refresh
+  // and again when the restored 'done' state re-triggers the save effect.
+  const savedRef = useRef(Boolean(restored?.sessionSaved))
 
   // What the cycle moves to once the current phase finishes.
   // `round` is incremented the moment a focus phase finishes, so at that point
@@ -103,6 +150,10 @@ export function FocusSessionProvider({ children }) {
   // so only focus phases are saved — otherwise the Garden would count rests.
   useEffect(() => {
     if (status !== 'done' || phase !== 'focus') return
+    // A restored 'done' run was already banked before the refresh.
+    if (savedRef.current) return
+    savedRef.current = true
+
     saveSession({
       id: `focus-${Date.now()}`,
       task,
@@ -114,6 +165,34 @@ export function FocusSessionProvider({ children }) {
     // fills as soon as the round is actually over.
     setRound((prev) => prev + 1)
   }, [status, phase, task, duration])
+
+  // Mirror the timer to storage so a refresh picks it back up. `remaining` is
+  // deliberately not a dependency — it ticks four times a second, and for a
+  // running timer the deadline below already carries that information.
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        TIMER_KEY,
+        JSON.stringify({
+          task,
+          step,
+          phase,
+          round,
+          phaseSeconds,
+          duration,
+          remaining,
+          status,
+          endAt: endAtRef.current,
+          startedAt: startedAtRef.current,
+          sessionSaved: savedRef.current,
+          savedAt: Date.now(),
+        })
+      )
+    } catch (err) {
+      console.error('Could not save the timer:', err)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task, step, phase, round, phaseSeconds, duration, status])
 
   const start = useCallback(() => {
     if (status === 'running') return
@@ -130,11 +209,15 @@ export function FocusSessionProvider({ children }) {
       setRemaining(seconds)
       startedAtRef.current = new Date().toISOString()
       endAtRef.current = Date.now() + seconds * 1000
+      savedRef.current = false // a fresh run, eligible to be banked again
       setStatus('running')
       return
     }
 
-    if (status !== 'paused') startedAtRef.current = new Date().toISOString()
+    if (status !== 'paused') {
+      startedAtRef.current = new Date().toISOString()
+      savedRef.current = false
+    }
     endAtRef.current = Date.now() + remaining * 1000
     setStatus('running')
   }, [status, phase, round, nextPhase, phaseSeconds, remaining])
@@ -152,6 +235,7 @@ export function FocusSessionProvider({ children }) {
     setRemaining(seconds)
     startedAtRef.current = new Date().toISOString()
     endAtRef.current = Date.now() + seconds * 1000
+    savedRef.current = false
     setStatus('running')
   }, [])
 
@@ -164,6 +248,7 @@ export function FocusSessionProvider({ children }) {
   const reset = useCallback(() => {
     endAtRef.current = null
     startedAtRef.current = null
+    savedRef.current = false
     setRemaining(duration)
     setStatus('idle')
   }, [duration])
