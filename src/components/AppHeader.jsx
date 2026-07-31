@@ -41,7 +41,7 @@ export default function AppHeader({ user }) {
 
         <div className="header-actions">
           {user && (
-            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-color, #4a4a4a)' }}>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink-soft)' }}>
               {user}
             </span>
           )}

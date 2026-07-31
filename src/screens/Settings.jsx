@@ -37,7 +37,8 @@ function GoogleConnection() {
         marginTop: '12px',
         padding: '12px',
         borderRadius: '10px',
-        background: 'var(--paper, #fff)',
+        background: 'var(--card)',
+        border: '1px solid var(--line)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -46,11 +47,13 @@ function GoogleConnection() {
             width: '32px',
             height: '32px',
             borderRadius: '50%',
-            background: 'var(--sand, #f0ece2)',
+            background: 'var(--pill)',
+            color: 'var(--ink)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '16px',
+            fontWeight: 600,
           }}
         >
           G
@@ -84,7 +87,8 @@ function GoogleConnection() {
             padding: '8px 16px',
             background: 'var(--green)',
             border: 'none',
-            color: '#fff',
+            color: 'var(--green-ink)',
+            fontWeight: 600,
           }}
         >
           Connect
