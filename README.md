@@ -15,9 +15,6 @@ cp .env.example .env    # first time only — Google sign-in needs this
 npm run dev
 ```
 
-`.env` is gitignored, so everyone makes their own. Skip it and the app still
-runs — Settings just says Google isn't set up, and briefing manual entry works.
-
 Open the URL it prints (usually http://localhost:5173). Use your browser's
 device toolbar at ~390px wide as this is a mobile app.
 
@@ -45,7 +42,7 @@ src/
     Reflection.jsx      TAB 4
     Settings.jsx        TAB 5
     Briefing.jsx        opened from Today, not a tab
-    Timer.jsx           opened from an anchor, not a tab, maybe can make a tab replace settings
+    Timer.jsx           opened from an anchor, not a tab
   styles/
     tokens.css          colors, fonts, logo, spacing — from the Figma
     app.css             app shell, header, tab bar, cards
@@ -56,7 +53,7 @@ src/
 Work only in your own files. If you need a change in a shared file, ask its owner.
 
 | Area | Files 
-|---|---|---|
+|---|---|
 | Today screen + check-off + tab bar | `screens/Today.jsx`, `components/TabBar.jsx` 
 | Design tokens | `styles/tokens.css`, `styles/app.css` 
 | Morning briefing + connections | `screens/Briefing.jsx`, `screens/Settings.jsx` 

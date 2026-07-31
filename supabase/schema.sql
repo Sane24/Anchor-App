@@ -1,13 +1,12 @@
 -- Anchor — Supabase schema
--- Paste this into the Supabase SQL editor and run it once.
 -- Safe to re-run: everything is guarded with "if not exists" / "drop policy if exists".
---
+
 -- Design: localStorage stays the source of truth. These tables are a per-user
 -- mirror so signing in on another device brings your data with you. Payloads are
 -- JSONB because the client shape is still moving (releasedAt, sleepHours and
 -- steps all landed in the last week) — a normalized schema would need a
 -- migration every time a screen gains a field.
---
+
 -- RLS is what makes the browser-visible publishable key safe. Without the
 -- policies below, anyone who finds the project URL can read every row.
 

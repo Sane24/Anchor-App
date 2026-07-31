@@ -4,5 +4,3 @@ dist
 *.local
 .vercel
 .env
-
-.claude/
