@@ -46,6 +46,28 @@
   --shadow-card: 0 1px 2px rgba(44, 49, 34, 0.05), 0 6px 16px rgba(44, 49, 34, 0.05);
 }
 
+/* Dark mode — set by the sun/moon toggle in the header (useThemeColor.js).
+   Warm near-blacks rather than neutral grey, so night keeps the same cozy
+   feel as the cream palette instead of turning clinical. Only surfaces, ink
+   and lines change here; the accent tier (--green / --green-ink / --card-alt)
+   is swapped per accent theme in useThemeColor.js, because a dark background
+   needs a *lighter* accent with dark text on it. */
+:root[data-theme='dark'] {
+  --page: #1B1E17;
+  --card: #23261E;
+  --pill: #2E3228;
+  --tabbar: #1F2219;
+
+  --ink: #ECE9DE;
+  --ink-soft: #9B9C8B;
+  --ink-eyebrow: #A9BB8B;
+
+  --line: #333729;
+  --line-strong: #4C513E;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px rgba(0, 0, 0, 0.26);
+}
+
 
 
 * { box-sizing: border-box; }

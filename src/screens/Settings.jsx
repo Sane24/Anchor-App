@@ -6,7 +6,7 @@ import {
   clearGoogleToken,
   isGoogleConfigured,
 } from '../data/googleAuth'
-import { useThemeColor, colorThemes } from '../hooks/useThemeColor'
+import { useThemeColor, colorThemes, themeSwatch } from '../hooks/useThemeColor'
 import NotificationSettings from '../components/NotificationSettings'
 // Kept in its own component so useGoogleConnect only runs when a client ID
 // exists. Hooks can't be called conditionally, but an unrendered component
@@ -152,7 +152,7 @@ export default function Settings({ user, onLogout }) {
               key={theme.id}
               type="button"
               className={themeId === theme.id ? 'theme-option active' : 'theme-option'}
-              style={{ '--theme-color': theme.vars['--green'] }}
+              style={{ '--theme-color': themeSwatch(theme) }}
               aria-pressed={themeId === theme.id}
               onClick={() => setThemeId(theme.id)}
             >

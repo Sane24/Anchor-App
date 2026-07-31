@@ -18,10 +18,17 @@
   padding: 18px var(--pad) 6px;
 }
 
+/* Also the "home" button — it's a Link, so undo the anchor styling. */
 .header-logo {
   display: flex;
   align-items: center;
   gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.header-logo:active {
+  opacity: 0.7;
 }
 
 .header-name {
@@ -85,7 +92,7 @@
   width: 36px;
   height: 4px;
   border-radius: 2px;
-  background: #D9D2C2;
+  background: var(--line-strong);
   flex-shrink: 0;
 }
 
@@ -110,7 +117,7 @@
   width: 100%;
   padding: 15.5px 17.5px;
   border-radius: 14px;
-  background: #FFFFFF;
+  background: var(--card);
   border: 1px solid var(--line);
   color: var(--ink);
   font-size: 15px;
@@ -1165,8 +1172,8 @@
   white-space: nowrap;
   padding: 10.5px 17.5px;
   border-radius: 18px;
-  background: #FFFFFF;
-  border: 1px solid #D9D2C2;
+  background: var(--card);
+  border: 1px solid var(--line-strong);
   color: var(--ink);
   font-size: 13.5px;
   font-weight: 600;
@@ -1191,8 +1198,8 @@
   width: 64px;
   height: 44px;
   border-radius: 22px;
-  background: #FFFFFF;
-  border: 1px solid #D9D2C2;
+  background: var(--card);
+  border: 1px solid var(--line-strong);
   color: var(--ink);
   font-size: 14px;
   font-weight: 600;
@@ -1230,8 +1237,8 @@
 /* ---------- Today information cards ---------- */
 
 .today-info-list {
-  background: #FBF9F3;
-  border: 1px solid rgba(44, 49, 34, 0.09);
+  background: var(--card);
+  border: 1px solid var(--line);
   border-radius: 18px;
   padding: 0 16px 6px;
 }
@@ -1272,7 +1279,7 @@
   font-size: 12px;
   font-weight: 500;
   line-height: 12px;
-  color: #75755F;
+  color: var(--ink-soft);
 }
 
 /* Calendar rows lead with the time in a fixed 70px column. */
@@ -2226,4 +2233,17 @@
   font-size: var(--fs-small);
   font-style: italic;
   line-height: 1.5;
+}
+
+/* ---------- Dark mode: artwork ----------
+   The garden is drawn in literal daylight colours so the accent picker can't
+   recolour the oak. Rather than redraw a night scene, dim it to dusk — the
+   plants keep their identity, they just stop glaring off a dark page. */
+
+:root[data-theme='dark'] .garden-scene {
+  filter: brightness(0.7) saturate(0.82);
+}
+
+:root[data-theme='dark'] .garden-immersive {
+  background: linear-gradient(#1F2419, #252C1E 55%, #2F3824);
 }
