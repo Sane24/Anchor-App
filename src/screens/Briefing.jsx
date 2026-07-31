@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchCalendarEvents, fetchGmailAsTasks } from '../data/googleData'
 import { getStoredGoogleToken } from '../data/googleAuth'
-import { loadDayPlan, loadJournalEntry, saveBriefingPlan } from '../store'
+import { dayKey, loadDayPlan, loadJournalEntry, saveBriefingPlan } from '../store'
 import { suggestFirstStep, nextFirstStep } from '../firstSteps'
+import { getWeekData } from './weekSampleData'
 
 const FILTERS = ['all', 'manual', 'calendar', 'gmail']
+
+// Wording matches This Week's SOURCE_LABEL so the same task reads the same on
+// both screens.
+const FILTER_LABELS = {
+  all: 'All',
+  manual: 'Added by you',
+  calendar: 'Calendar',
+  gmail: 'Gmail',
+}
 
 // The "note for tomorrow-you" written in last night's reflection.
 function lastNightNote() {
@@ -31,11 +40,26 @@ function candidateFromAnchor(anchor, source = anchor.source) {
   }
 }
 
+// Undated items (anything typed in here) sort after the week's tasks.
+function sortKey(item) {
+  return `${item.date || '9999-99-99'} ${item.dueTime || '99:99'}`
+}
+
+// "Today" for today, otherwise the weekday, matching how This Week reads.
+function dayTag(dateKey) {
+  if (!dateKey) return ''
+  if (dateKey === dayKey()) return 'Today'
+  const [year, month, day] = dateKey.split('-').map(Number)
+  return new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(
+    new Date(year, month - 1, day)
+  )
+}
+
 function sourceName(source) {
   if (source === 'calendar') return 'Calendar'
   if (source === 'gmail') return 'Gmail'
   if (source === 'rollover') return 'Moved from yesterday'
-  return 'Manual'
+  return FILTER_LABELS.manual
 }
 
 export default function Briefing() {
@@ -65,51 +89,62 @@ export default function Briefing() {
   const [filter, setFilter] = useState('all')
   const [loadingImports, setLoadingImports] = useState(googleConnected)
 
+  // The possibilities list is This Week's list — the whole week, not just
+  // today, so nothing you can see on that screen is missing here.
   useEffect(() => {
-    if (!googleConnected) return undefined
     let cancelled = false
 
-    async function loadGoogleItems() {
-      try {
-        const [events, emails] = await Promise.all([
-          fetchCalendarEvents(),
-          fetchGmailAsTasks(),
-        ])
+    getWeekData()
+      .then(({ tasks }) => {
         if (cancelled) return
-
-        const calendarItems = events.map((event) => ({
-          id: `cal-${event.id}`,
-          title: event.title,
-          source: 'calendar',
-          start: event.start,
+        const fromWeek = tasks.map((task) => ({
+          id: `week-${task.id}`,
+          title: task.title,
+          source: task.source,
+          firstStep: task.firstStep,
+          date: task.date,
+          dueTime: task.dueTime,
+          completed: task.completed,
         }))
-        const gmailItems = emails.map((email) => ({
-          id: `mail-${email.id}`,
-          title: email.title,
-          source: 'gmail',
-          from: email.from,
-        }))
-        setItems((current) => mergeCandidates(current, calendarItems, gmailItems))
-      } catch (err) {
-        console.error('Could not load Google items for the briefing:', err)
-      } finally {
-        if (!cancelled) setLoadingImports(false)
-      }
-    }
+        if (fromWeek.length === 0) return
 
-    loadGoogleItems()
+        setItems((current) => mergeCandidates(current, fromWeek))
+        setFirstSteps((current) => {
+          const next = { ...current }
+          fromWeek.forEach((item) => {
+            if (!next[item.id]) {
+              next[item.id] = item.firstStep || suggestFirstStep(item.title, item.source)
+            }
+          })
+          return next
+        })
+      })
+      .catch((err) => {
+        console.error('Could not load this week for the briefing:', err)
+      })
+
     return () => {
       cancelled = true
     }
+  }, [])
+
+  // Calendar and Gmail are no longer fetched straight into this list. They
+  // reach it through This Week, which is the screen that owns those imports —
+  // pulling them in again here is what put unrelated tasks in the list.
+  useEffect(() => {
+    if (googleConnected) setLoadingImports(false)
   }, [googleConnected])
 
-  const visibleItems = items.filter((item) => {
-    if (filter === 'all') return true
-    if (filter === 'manual') {
-      return item.source === 'manual' || item.source === 'custom' || item.source === 'rollover'
-    }
-    return item.source === filter
-  })
+  const visibleItems = items
+    .filter((item) => {
+      if (filter === 'all') return true
+      if (filter === 'manual') {
+        return item.source === 'manual' || item.source === 'custom' || item.source === 'rollover'
+      }
+      return item.source === filter
+    })
+    // Tuesday before Wednesday, and earlier in the day first.
+    .sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
 
   function toggleItem(item) {
     if (selectedIds.includes(item.id)) {
@@ -233,7 +268,7 @@ export default function Briefing() {
                 aria-pressed={filter === option}
                 onClick={() => setFilter(option)}
               >
-                {option[0].toUpperCase() + option.slice(1)}
+                {FILTER_LABELS[option]}
               </button>
             ))}
           </div>
@@ -268,7 +303,11 @@ export default function Briefing() {
                   <span className="briefing-check" aria-hidden="true" />
                   <span>
                     <strong>{item.title}</strong>
-                    <small>{sourceName(item.source)}</small>
+                    <small>
+                      {[dayTag(item.date), item.dueTime, sourceName(item.source)]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </small>
                   </span>
                 </label>
 
