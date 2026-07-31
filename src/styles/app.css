@@ -1304,6 +1304,13 @@
   margin-bottom: 6.19px;
 }
 
+.today-info-empty {
+  margin: 0;
+  padding-bottom: 14px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
 .today-info-row {
   display: flex;
   align-items: center;

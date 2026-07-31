@@ -1,16 +1,27 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EditIcon, RepeatIcon } from '../components/icons'
 import { useFocusSession } from '../hooks/useFocusSession'
 import {
+  dayKey,
   loadDayPlan,
   moveAnchorToTomorrow,
   saveDayPlan,
   updateTodayAnchor,
 } from '../store'
 import { nextFirstStep, suggestFirstStep } from '../firstSteps'
+import { getWeekData } from './weekSampleData'
 
 const MAX_ANCHORS = 3
+
+// Same 12-hour format This Week uses, so a task reads identically on both.
+function clockTime(value) {
+  if (!value) return ''
+  const [h, m] = value.split(':').map(Number)
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const hour = h % 12 === 0 ? 12 : h % 12
+  return m === 0 ? `${hour} ${suffix}` : `${hour}:${String(m).padStart(2, '0')} ${suffix}`
+}
 
 // One-tap demo data for an empty day — the fastest way to see the app working
 // (and the path DEPLOY.md points graders at). Goes through the normal store,
@@ -44,6 +55,24 @@ export default function Today() {
   const [stepDraft, setStepDraft] = useState('')
   const [notice, setNotice] = useState('')
   const [newTitle, setNewTitle] = useState('')
+  const [week, setWeek] = useState(null)
+
+  // Today's rows come from the same source as This Week, so the two screens
+  // can't disagree about what's due.
+  useEffect(() => {
+    let cancelled = false
+    getWeekData()
+      .then((data) => {
+        if (!cancelled) setWeek(data)
+      })
+      .catch((err) => {
+        console.error('Could not load this week for Today:', err)
+        if (!cancelled) setWeek({ tasks: [], events: [] })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const landed = plan.anchors.filter((anchor) => anchor.completed).length
   const nextAnchor = plan.anchors.find((anchor) => !anchor.completed)
@@ -129,6 +158,17 @@ export default function Today() {
     setEditingId(null)
     setNotice(`Moved “${anchor.title}” to tomorrow without judgment.`)
   }
+
+  const today = dayKey()
+  const anchorIds = new Set(plan.anchors.map((anchor) => anchor.id))
+  // Anchors already have their own section above, so they're left out here
+  // rather than listed twice.
+  const dueToday = (week?.tasks || [])
+    .filter((task) => task.date === today && !task.completed && !anchorIds.has(task.id))
+    .sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'))
+  const eventsToday = (week?.events || [])
+    .filter((event) => event.date === today)
+    .sort((a, b) => (a.start || '99:99').localeCompare(b.start || '99:99'))
 
   const greetingSummary = nextAnchor
     ? `Anchor ${plan.anchors.indexOf(nextAnchor) + 1} is next: “${nextAnchor.firstStep}.” 2 events on the calendar.`
@@ -290,29 +330,46 @@ export default function Today() {
 
       <section className="today-info-list">
         <h3 className="today-info-title">Things due today</h3>
-        <div className="today-info-row today-info-row-due">
-          <span className="today-info-label">CS160 PA#2</span>
-          <span className="today-info-time">11:59 PM</span>
-        </div>
-        <div className="today-info-row today-info-row-due">
-          <span className="today-info-label">Essay outline</span>
-          <span className="today-info-time">5:00 PM</span>
-        </div>
-        <div className="today-info-row today-info-row-due today-info-row-last">
-          <span className="today-info-label">Reply to research email</span>
-        </div>
+        {!week && <p className="today-info-empty">Loading…</p>}
+        {week && dueToday.length === 0 && (
+          <p className="today-info-empty">Nothing else due today.</p>
+        )}
+        {dueToday.map((task, index) => (
+          <div
+            className={
+              index === dueToday.length - 1
+                ? 'today-info-row today-info-row-due today-info-row-last'
+                : 'today-info-row today-info-row-due'
+            }
+            key={task.id}
+          >
+            <span className="today-info-label">{task.title}</span>
+            {task.dueTime && (
+              <span className="today-info-time">{clockTime(task.dueTime)}</span>
+            )}
+          </div>
+        ))}
       </section>
 
       <section className="today-info-list">
         <h3 className="today-info-title">On the calendar</h3>
-        <div className="today-info-row">
-          <span className="today-info-at">2:00 PM</span>
-          <span className="today-info-label">Research meeting</span>
-        </div>
-        <div className="today-info-row today-info-row-last">
-          <span className="today-info-at">5:30 PM</span>
-          <span className="today-info-label">Gym</span>
-        </div>
+        {!week && <p className="today-info-empty">Loading…</p>}
+        {week && eventsToday.length === 0 && (
+          <p className="today-info-empty">Nothing on the calendar today.</p>
+        )}
+        {eventsToday.map((event, index) => (
+          <div
+            className={
+              index === eventsToday.length - 1
+                ? 'today-info-row today-info-row-last'
+                : 'today-info-row'
+            }
+            key={event.id}
+          >
+            <span className="today-info-at">{clockTime(event.start)}</span>
+            <span className="today-info-label">{event.title}</span>
+          </div>
+        ))}
       </section>
     </div>
   )
