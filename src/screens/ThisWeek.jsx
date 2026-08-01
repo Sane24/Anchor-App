@@ -1,5 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getWeekData } from './weekSampleData'
+import {
+  addWeekTask,
+  deleteWeekTask,
+  enableSamples,
+  disableSamples,
+  samplesEnabled,
+  getWeekData,
+  getWeekDataNow,
+  isWeekTask,
+  restoreWeekTask,
+  updateWeekTask,
+} from './weekSampleData'
+import { removePlanItem, restorePlanItem, updatePlanItem } from '../store'
+import { getStoredGoogleToken } from '../data/googleAuth'
+import { scanGoogle, TokenExpiredError } from '../data/googleData'
 import '../styles/week.css'
 
 // date helpers
@@ -64,7 +78,13 @@ export default function ThisWeek() {
   const [data, setData] = useState(null)
   const [status, setStatus] = useState('loading') // loading | ready | error
   const [detailTask, setDetailTask] = useState(null)
+  const [detailMode, setDetailMode] = useState('view') // view | edit
+  const [draft, setDraft] = useState({ title: '', firstStep: '', dueTime: '', date: '' })
+  // { text, undo } — undo restores whatever was just deleted.
+  const [notice, setNotice] = useState(null)
   const [briefingOpen, setBriefingOpen] = useState(false)
+  const [newTask, setNewTask] = useState(() => ({ title: '', date: days[0].key }))
+  const [scanning, setScanning] = useState(false)
 
   // The whole week is on the page at once; these let the strip jump to a day
   // and let the scroll position say which chip is current.
@@ -87,7 +107,10 @@ export default function ThisWeek() {
     const map = {}
     if (!data) return map
     for (const t of data.tasks) (map[t.date] ||= []).push(t)
-    for (const k in map) map[k].sort((a, b) => a.dueTime.localeCompare(b.dueTime))
+    // Anchors carry no due time, so they sort after the timed items instead of
+    // throwing on an undefined dueTime.
+    const at = (t) => t.dueTime || '99:99'
+    for (const k in map) map[k].sort((a, b) => at(a).localeCompare(at(b)))
     return map
   }, [data])
 
@@ -154,6 +177,139 @@ export default function ThisWeek() {
     sectionRefs.current[key]?.scrollIntoView({ behavior: scrollStyle(), block: 'start' })
   }, [])
 
+  function closeDetail() {
+    setDetailTask(null)
+    setDetailMode('view')
+  }
+
+  // The weekly briefing scan: sweep the next 7 days of Calendar plus unread
+  // mail into the week, then open the day-by-day summary on the result.
+  async function startWeeklyBriefing() {
+    if (briefingOpen) {
+      setBriefingOpen(false)
+      return
+    }
+    if (!getStoredGoogleToken()) {
+      setBriefingOpen(true)
+      return
+    }
+
+    setScanning(true)
+    try {
+      const result = await scanGoogle(7)
+      setData(getWeekDataNow())
+      setNotice({
+        text: `Scanned the week: ${result.tasks} task${result.tasks === 1 ? '' : 's'} from your inbox, ${result.events} calendar event${result.events === 1 ? '' : 's'}.`,
+        undo: null,
+      })
+    } catch (err) {
+      if (err instanceof TokenExpiredError) {
+        setNotice({ text: 'Your Google session expired — reconnect in Settings.', undo: null })
+      } else {
+        console.error('Weekly scan failed:', err)
+        setNotice({ text: 'Couldn’t reach Google just now. Showing what’s saved.', undo: null })
+      }
+    } finally {
+      setScanning(false)
+      setBriefingOpen(true)
+    }
+  }
+
+  // Mirrors Today's "Try sample Anchors": demo data is opt-in, one tap,
+  // and just as easy to take back.
+  function loadSamples() {
+    enableSamples()
+    setData(getWeekDataNow())
+    setNotice({
+      text: 'Loaded a sample week. Your own tasks are untouched.',
+      undo: () => {
+        disableSamples()
+        setData(getWeekDataNow())
+        setNotice(null)
+      },
+    })
+  }
+
+  function addOwnTask(event) {
+    event.preventDefault()
+    const title = newTask.title.trim()
+    if (!title) return
+    addWeekTask({ title, date: newTask.date })
+    setData(getWeekDataNow())
+    setNewTask({ title: '', date: days[0].key })
+  }
+
+  function openEdit() {
+    setDraft({
+      title: detailTask.title,
+      firstStep: detailTask.firstStep || '',
+      dueTime: detailTask.dueTime || '',
+      date: detailTask.date,
+    })
+    setDetailMode('edit')
+  }
+
+  // Two write paths: sample tasks change through the overrides layer;
+  // planned anchors change in the store, so Today and the briefing follow.
+  function saveEdits(event) {
+    event.preventDefault()
+    const title = draft.title.trim()
+    if (!title) return
+
+    if (isWeekTask(detailTask.id)) {
+      updateWeekTask(detailTask.id, {
+        title,
+        firstStep: draft.firstStep.trim(),
+        dueTime: draft.dueTime,
+        date: draft.date || detailTask.date,
+      })
+    } else {
+      updatePlanItem(detailTask.date, detailTask.id, {
+        title,
+        firstStep: draft.firstStep.trim(),
+      })
+    }
+    setData(getWeekDataNow())
+    closeDetail()
+  }
+
+  function deleteTask() {
+    const task = detailTask
+    if (isWeekTask(task.id)) {
+      const removed = deleteWeekTask(task.id)
+      setNotice({
+        text: `Removed “${task.title}”.`,
+        undo: () => {
+          if (removed) restoreWeekTask(removed)
+          setData(getWeekDataNow())
+          setNotice(null)
+        },
+      })
+    } else {
+      // Keep the fields the plan actually stores, so undo puts back a clean
+      // anchor rather than the week-view row shape.
+      const planItem = {
+        id: task.id,
+        title: task.title,
+        firstStep: task.firstStep,
+        source: task.source,
+        completed: task.completed,
+        startedAt: null,
+      }
+      removePlanItem(task.date, task.id)
+      setNotice({
+        text: `Removed “${task.title}”.`,
+        undo: () => {
+          restorePlanItem(task.date, planItem)
+          setData(getWeekDataNow())
+          setNotice(null)
+        },
+      })
+    }
+    setData(getWeekDataNow())
+    closeDetail()
+  }
+
   return (
     <div className="screen week-screen">
       <h2 className="screen-title">This Week</h2>
@@ -169,11 +325,20 @@ export default function ThisWeek() {
         <button
           className="btn-week-primary"
           type="button"
-          onClick={() => setBriefingOpen((v) => !v)}
-          disabled={status !== 'ready'}
+          onClick={startWeeklyBriefing}
+          disabled={status !== 'ready' || scanning}
         >
-          {briefingOpen ? 'Close weekly briefing' : 'Start weekly briefing'}
+          {scanning
+            ? 'Scanning your week…'
+            : briefingOpen
+              ? 'Close weekly briefing'
+              : 'Start weekly briefing'}
         </button>
+        {!getStoredGoogleToken() && !scanning && (
+          <p className="week-briefing-hint">
+            Connect Google in Settings and this scans your real calendar and inbox.
+          </p>
+        )}
       </div>
 
       {briefingOpen && status === 'ready' && (
@@ -224,6 +389,50 @@ export default function ThisWeek() {
         })}
       </nav>
 
+      {/* Get something on the week: your own task, any visible day. */}
+      {status === 'ready' && (
+        <form className="card week-add" onSubmit={addOwnTask}>
+          <label className="eyebrow" htmlFor="week-add-title">Add a task</label>
+          <div className="week-add-row">
+            <input
+              id="week-add-title"
+              type="text"
+              value={newTask.title}
+              placeholder="Something with a deadline"
+              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+            />
+            <select
+              aria-label="Which day"
+              value={newTask.date}
+              onChange={(e) => setNewTask({ ...newTask, date: e.target.value })}
+            >
+              {days.map(({ key, date }) => (
+                <option key={key} value={key}>{dayLabel(date)}</option>
+              ))}
+            </select>
+            <button className="btn-week-primary" type="submit" disabled={!newTask.title.trim()}>
+              Add
+            </button>
+          </div>
+          {/* Stays reachable whenever samples are off — a single anchor from
+              Today counts as a week task, so gating this on a totally empty
+              week hid it almost immediately. */}
+          {!samplesEnabled() && (
+            <button className="week-add-alt" type="button" onClick={loadSamples}>
+              or try a week of sample tasks
+            </button>
+          )}
+        </form>
+      )}
+
+      {/* A blank week */}
+      {status === 'ready' && data.tasks.length === 0 && data.events.length === 0 && (
+        <div className="card week-blank">
+          <strong>Your week is a blank page.</strong>
+          <p className="week-state-note">Add a task above, or load some samples to look around.</p>
+        </div>
+      )}
+
       {/* Loading state */}
       {status === 'loading' && (
         <div className="card week-loading" aria-live="polite">
@@ -267,7 +476,7 @@ export default function ThisWeek() {
                 </div>
 
                 {dayTasks.length === 0 && dayEvents.length === 0 ? (
-                  <p className="week-day-clear">Nothing scheduled — a clear day.</p>
+                  <p className="week-day-clear">Nothing scheduled.</p>
                 ) : (
                   <>
                     {dayTasks.length > 0 && (
@@ -291,9 +500,11 @@ export default function ThisWeek() {
                               <span className={`source-tag source-${t.source}`}>
                                 {SOURCE_LABEL[t.source]}
                               </span>
-                              <span className="week-task-time">
-                                due {formatTime(t.dueTime)}
-                              </span>
+                              {t.dueTime && (
+                                <span className="week-task-time">
+                                  due {formatTime(t.dueTime)}
+                                </span>
+                              )}
                             </span>
                           </button>
                         ))}
@@ -326,11 +537,24 @@ export default function ThisWeek() {
         </div>
       )}
 
+      {/* Removed-task notice, with the way back */}
+      {notice && (
+        <div className="today-notice week-notice" role="status">
+          <span>{notice.text}</span>
+          {notice.undo && (
+            <button className="today-notice-undo" type="button" onClick={notice.undo}>
+              Undo
+            </button>
+          )}
+          <button type="button" aria-label="Dismiss message" onClick={() => setNotice(null)}>×</button>
+        </div>
+      )}
+
       {/* Task detail */}
       {detailTask && (
         <div
           className="week-detail-backdrop"
-          onClick={() => setDetailTask(null)}
+          onClick={closeDetail}
           role="presentation"
         >
           <div
@@ -340,26 +564,90 @@ export default function ThisWeek() {
             aria-label="Task details"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="eyebrow">
-              {SOURCE_LABEL[detailTask.source]} · due{' '}
-              {formatTime(detailTask.dueTime)}
-            </div>
-            <h3 className="week-detail-title">{detailTask.title}</h3>
-            {detailTask.completed ? (
-              <p className="week-state-note">Landed. Nice.</p>
+            {detailMode === 'edit' ? (
+              <form className="week-detail-form" onSubmit={saveEdits}>
+                <div className="eyebrow">Editing task</div>
+
+                <label htmlFor="week-edit-title">Task</label>
+                <input
+                  id="week-edit-title"
+                  type="text"
+                  value={draft.title}
+                  autoFocus
+                  onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                />
+
+                <label htmlFor="week-edit-step">First step</label>
+                <input
+                  id="week-edit-step"
+                  type="text"
+                  value={draft.firstStep}
+                  onChange={(e) => setDraft({ ...draft, firstStep: e.target.value })}
+                />
+
+                {/* Day and due time only exist on week tasks; planned anchors
+                    are day-intentions without a clock time. */}
+                {isWeekTask(detailTask.id) && (
+                  <>
+                    <label htmlFor="week-edit-date">Day</label>
+                    <input
+                      id="week-edit-date"
+                      type="date"
+                      value={draft.date}
+                      min={days[0].key}
+                      max={days[days.length - 1].key}
+                      onChange={(e) => setDraft({ ...draft, date: e.target.value })}
+                    />
+
+                    <label htmlFor="week-edit-time">Due time</label>
+                    <input
+                      id="week-edit-time"
+                      type="time"
+                      value={draft.dueTime}
+                      onChange={(e) => setDraft({ ...draft, dueTime: e.target.value })}
+                    />
+                  </>
+                )}
+
+                <div className="week-detail-actions">
+                  <button className="btn-week-primary" type="submit" disabled={!draft.title.trim()}>
+                    Save
+                  </button>
+                  <button className="btn-ghost" type="button" onClick={() => setDetailMode('view')}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
             ) : (
-              <div className="week-detail-step">
-                <span className="week-detail-step-pill">First step</span>
-                <span>{detailTask.firstStep}</span>
-              </div>
+              <>
+                <div className="eyebrow">
+                  {SOURCE_LABEL[detailTask.source]}
+                  {detailTask.dueTime ? ` · due ${formatTime(detailTask.dueTime)}` : ''}
+                </div>
+                <h3 className="week-detail-title">{detailTask.title}</h3>
+                {detailTask.completed ? (
+                  <p className="week-state-note">Landed. Nice.</p>
+                ) : (
+                  <div className="week-detail-step">
+                    <span className="week-detail-step-pill">First step</span>
+                    <span>{detailTask.firstStep}</span>
+                  </div>
+                )}
+                <div className="week-detail-actions">
+                  <button className="btn-week-primary" type="button" onClick={closeDetail}>
+                    Close
+                  </button>
+                  {!detailTask.completed && (
+                    <button className="btn-ghost" type="button" onClick={openEdit}>
+                      Edit
+                    </button>
+                  )}
+                  <button className="btn-ghost week-detail-delete" type="button" onClick={deleteTask}>
+                    Delete
+                  </button>
+                </div>
+              </>
             )}
-            <button
-              className="btn-week-primary"
-              type="button"
-              onClick={() => setDetailTask(null)}
-            >
-              Close
-            </button>
           </div>
         </div>
       )}
