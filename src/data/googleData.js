@@ -132,7 +132,7 @@ export async function fetchGmailAsTasks() {
 // entries land as events on their days. Rescans replace the previous import,
 // so nothing duplicates; user edits/deletions live in the week layer's diff
 // maps and survive.
-export async function scanGoogle(daysAhead = 1) {
+export async function scanGoogle(daysAhead = 7) {
   if (!getStoredGoogleToken()) return { connected: false, tasks: 0, events: 0 }
 
   const [events, tasks] = await Promise.all([
