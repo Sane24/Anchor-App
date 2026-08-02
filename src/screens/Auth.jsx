@@ -58,6 +58,7 @@ export default function Auth() {
     const [busy, setBusy] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirm, setShowConfirm] = useState(false)
+    const [verifySent, setVerifySent] = useState(false)
 
     // A recovery link can land while the sheet is already open.
     useEffect(() => {
@@ -84,22 +85,23 @@ export default function Auth() {
         setMode(next)
         setError('')
         setSent(false)
+        setVerifySent(false)
         setPassword('')
         setConfirm('')
     }
 
 
     const handleGoogleSignIn = async () => {
-    setError('')
-    setBusy(true)
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-            redirectTo: redirectTarget(),
-        },
-    })
-    setBusy(false)
-    if (oauthError) setError(oauthError.message)
+        setError('')
+        setBusy(true)
+        const { error: oauthError } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: redirectTarget(),
+            },
+        })
+        setBusy(false)
+        if (oauthError) setError(oauthError.message)
     }
 
     const handleSubmit = async (e) => {
@@ -168,7 +170,7 @@ export default function Auth() {
             setBusy(false)
             if (signUpError) return setError(signUpError.message)
 
-            navigate('/')
+            setVerifySent(true)
             return
         }
 
@@ -205,16 +207,24 @@ export default function Auth() {
                     <p>{copy.sub}</p>
                 </div>
 
-                {/* Reset link sent — a confirmation instead of the form. */}
-                {mode === 'forgot' && sent ? (
+                {(mode === 'forgot' && sent) || (mode === 'signup' && verifySent) ? (
                     <div className="auth-form">
-                        <p className="auth-note">
-                            If an account exists for <strong>{email}</strong>, a reset link is on
-                            its way. It expires in an hour.
-                        </p>
-                        <p className="auth-note">
-                            Nothing after a minute? Check your spam folder before trying again.
-                        </p>
+                        {mode === 'signup' ? (
+                            <p className="auth-note">
+                                A confirmation link has been sent to <strong>{email}</strong>. Please check and verify, then come back
+                                 to this page to sign in.
+                            </p>
+                        ) : (
+                            <>
+                                <p className="auth-note">
+                                    If you already have made account with, <strong>{email}</strong>, a reset
+                                    password link has been sent to you. This link will expire in an hour.
+                                </p>
+                                <p className="auth-note">
+                                    Haven't received anything? Refresh or check your spam folder before trying again.
+                                </p>
+                            </>
+                        )}
                         <button type="button" className="auth-submit" onClick={() => switchMode('signin')}>
                             Back to sign in
                         </button>
@@ -342,7 +352,7 @@ export default function Auth() {
                         Continue with Google
                     </button>
                 )}
-                
+
                 {/* Mode switch */}
                 {mode === 'forgot' && !sent && (
                     <div className="auth-alt">
