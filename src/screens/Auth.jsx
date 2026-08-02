@@ -88,7 +88,7 @@ export default function Auth() {
         setVerifySent(false)
         setPassword('')
         setConfirm('')
-    }
+    } 
 
 
     const handleGoogleSignIn = async () => {
