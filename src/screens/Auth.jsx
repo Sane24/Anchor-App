@@ -88,6 +88,20 @@ export default function Auth() {
         setConfirm('')
     }
 
+
+    const handleGoogleSignIn = async () => {
+    setError('')
+    setBusy(true)
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: redirectTarget(),
+        },
+    })
+    setBusy(false)
+    if (oauthError) setError(oauthError.message)
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
@@ -307,6 +321,28 @@ export default function Auth() {
                     </form>
                 )}
 
+                {(mode === 'signin' || mode === 'signup') && (
+                    <button
+                        type="button"
+                        onClick={handleGoogleSignIn}
+                        disabled={busy}
+                        style={{
+                            marginTop: '10px',
+                            width: '100%',
+                            padding: '12px',
+                            backgroundColor: '#ffffff',
+                            color: '#1a1a1a',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '10px',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                        }}
+                    >
+                        Continue with Google
+                    </button>
+                )}
+                
                 {/* Mode switch */}
                 {mode === 'forgot' && !sent && (
                     <div className="auth-alt">
