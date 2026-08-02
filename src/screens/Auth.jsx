@@ -92,16 +92,16 @@ export default function Auth() {
 
 
     const handleGoogleSignIn = async () => {
-        setError('')
-        setBusy(true)
-        const { error: oauthError } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: redirectTarget(),
-            },
-        })
-        setBusy(false)
-        if (oauthError) setError(oauthError.message)
+    setError('')
+    setBusy(true)
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: redirectTarget(),
+        },
+    })
+    setBusy(false)
+    if (oauthError) setError(oauthError.message)
     }
 
     const handleSubmit = async (e) => {
