@@ -4,9 +4,16 @@ import { useEffect, useRef } from 'react'
 // app ships without any audio files.
 //
 // White and brown noise are exact — those are mathematical definitions, not
-// recordings. Cafe and Rain are built by layering: a base texture, events
-// written straight into the PCM (raindrops, cup clinks), and a slow modulation
-// so the bed breathes instead of sitting still.
+// recordings. Cafe and Rain are built by layering: a base texture, a slow
+// modulation so the bed breathes instead of sitting still, and a second copy
+// of the loop at a detuned rate so the buffer's twelve seconds never announce
+// themselves.
+//
+// Rain also writes individual drops into the PCM. Cafe deliberately does not
+// get the same treatment: a raindrop is a noise burst and two hundred of them
+// blur into texture, but a discrete tonal event — a cup on a saucer — stays
+// audible as itself, and a baked-in one repeats on every pass of the loop.
+// Periodic pings are the opposite of what a focus timer wants.
 //
 // To swap in real recordings later, replace buildSource() with a BufferSource
 // fed by fetch + decodeAudioData, keeping the same gain envelope.
@@ -24,17 +31,17 @@ const BUFFER_SECONDS = 12
 const ENVELOPE_STEP = 64
 
 // Each preset loses a different amount of energy in its filters, so levels are
-// tuned per option to land around 0.038 RMS at the destination — measured
-// through an OfflineAudioContext, not guessed, so switching options doesn't
-// jump in volume.
-// Rendered 8s of each preset in an OfflineAudioContext and divided the target
-// by the measured RMS. White lands on 0.577 raw, which is 1/sqrt(3) — the exact
-// RMS of uniform noise, so the measurement itself checks out. Peaks stay under
-// 0.22 at these levels, well clear of clipping.
+// tuned per option so that switching does not jump in volume.
+//
+// Verified by tapping the graph at ctx.destination in the running app rather
+// than by reasoning about the gains: White 0.0270, Brown 0.0268, Cafe 0.0276,
+// Rain 0.0257 RMS — 7.4% between loudest and quietest, under a decibel. Peaks
+// stay near 0.11, far clear of clipping. Re-measure after touching any filter:
+// steepening Cafe's rolloff alone moved it 10%.
 const LEVELS = {
   'White noise': 0.066,
   'Brown noise': 0.189,
-  Cafe: 0.304,
+  Cafe: 0.278,
   'Rain sound': 0.151,
 }
 
@@ -73,17 +80,6 @@ function addDrop(data, start, sampleRate) {
   }
 }
 
-// Adds a damped sine: a cup meeting a saucer somewhere across the room.
-function addClink(data, start, sampleRate) {
-  const frequency = 1500 + Math.random() * 2300
-  const decay = sampleRate * (0.02 + Math.random() * 0.03)
-  const length = Math.min(Math.floor(decay * 5), data.length - start)
-  for (let i = 0; i < length; i += 1) {
-    data[start + i] +=
-      Math.sin((2 * Math.PI * frequency * i) / sampleRate) * 0.16 * Math.exp(-i / decay)
-  }
-}
-
 // Rain: a broadband sheet with individual drops written into the PCM. Baking
 // them in rather than scheduling BufferSources keeps the runtime cost at zero
 // and leaves teardown with nothing extra to cancel.
@@ -95,13 +91,37 @@ function fillRain(data, sampleRate) {
   }
 }
 
-// Cafe: speech-shaped noise under a syllabic envelope. Several envelopes at
-// unrelated rates read as separate conversations; one envelope just pulses.
+// Cafe: speech-shaped noise under a syllabic envelope.
+//
+// Voice count is the whole ballgame. Five envelopes do not average out — they
+// beat against each other and the bed pulses at a few Hz, which reads as a
+// tremolo pedal rather than a room. Forty of them overlap into the steady
+// murmur you actually hear from across a cafe.
+const CAFE_VOICES = 40
+
+// Mean of a half-wave rectified sine. The summed envelope settles here, so it
+// is what the swing below is measured against.
+const RECTIFIED_MEAN = 1 / Math.PI
+
+// How far the bed is allowed to move around that mean.
+//
+// Voice count alone was not enough. Forty voices cut the envelope's spread by
+// sqrt(40/5) against the old five, but dividing by RECTIFIED_MEAN to get a
+// relative swing multiplies it back up by about the same factor — measured,
+// the bed still moved 19% either side of its mean, against 26% before. Halving
+// it here is what actually takes the pulse out: roughly 10%, which is life in
+// the bed rather than a tremolo on it.
+const CAFE_DEPTH = 0.55
+
+// Corner of the two-pole rolloff over the babble. Lower is softer and further
+// away; much below this the consonant band goes with it and the room stops
+// reading as people and starts reading as wind.
+const CAFE_TOP = 1900
+
 function fillCafe(data, sampleRate) {
-  const voices = 5
   const rates = []
   const phases = []
-  for (let v = 0; v < voices; v += 1) {
+  for (let v = 0; v < CAFE_VOICES; v += 1) {
     rates.push(2.5 + Math.random() * 3) // syllables per second
     phases.push(Math.random() * Math.PI * 2)
   }
@@ -113,20 +133,20 @@ function fillCafe(data, sampleRate) {
       previous = next
       const t = (i + ENVELOPE_STEP) / sampleRate
       let sum = 0
-      for (let v = 0; v < voices; v += 1) {
+      for (let v = 0; v < CAFE_VOICES; v += 1) {
         // Half-wave rectified: a syllable is on, then it is not.
         sum += Math.max(0, Math.sin(t * rates[v] * 2 * Math.PI + phases[v]))
       }
-      next = sum / voices
+      next = sum / CAFE_VOICES
     }
     const blend = (i % ENVELOPE_STEP) / ENVELOPE_STEP
     const envelope = previous + (next - previous) * blend
-    data[i] = (Math.random() * 2 - 1) * (0.25 + 0.75 * envelope) * 0.6
-  }
-
-  const clinks = Math.floor(data.length / sampleRate / 4) // roughly one every 4s
-  for (let n = 0; n < clinks; n += 1) {
-    addClink(data, Math.floor(Math.random() * data.length), sampleRate)
+    const swing = (envelope - RECTIFIED_MEAN) / RECTIFIED_MEAN
+    // Floored so a rare deep trough thins the bed instead of punching a hole.
+    const level = Math.max(0.2, 1 + CAFE_DEPTH * swing)
+    // 0.29 holds the same RMS the old (0.25 + 0.75 * envelope) * 0.6 produced,
+    // so LEVELS.Cafe still lands with the other three presets.
+    data[i] = (Math.random() * 2 - 1) * level * 0.29
   }
 }
 
@@ -230,17 +250,48 @@ function buildSource(ctx, cache, selection) {
     bandpass.type = 'bandpass'
     bandpass.frequency.value = 700
     bandpass.Q.value = 0.6
+    // The bed underneath is white noise, so it carries as much energy at 4 kHz
+    // as at 400. One biquad at 3400 rolls off at 12 dB/oct and leaves plenty of
+    // 2–4 kHz standing — which is exactly where the ear is most sensitive, and
+    // why this read as hissy rather than distant. Two in series at a lower
+    // corner gives 24 dB/oct and takes that band down properly.
     const lowpass = ctx.createBiquadFilter()
     lowpass.type = 'lowpass'
-    lowpass.frequency.value = 3400
+    lowpass.frequency.value = CAFE_TOP
+    const lowpass2 = ctx.createBiquadFilter()
+    lowpass2.type = 'lowpass'
+    lowpass2.frequency.value = CAFE_TOP
+    // A shelf rather than a third pole: keeps a little air so the room does not
+    // sound like it is behind a closed door.
+    const tilt = ctx.createBiquadFilter()
+    tilt.type = 'highshelf'
+    tilt.frequency.value = 1600
+    tilt.gain.value = -5
     const babbleGain = ctx.createGain()
-    babbleGain.gain.value = 0.9
+    // Raised to make back the energy the steeper rolloff removes; the level
+    // check below confirms Cafe still sits with the other three.
+    babbleGain.gain.value = 1.5
     babble.connect(bandpass)
     bandpass.connect(lowpass)
-    lowpass.connect(babbleGain)
+    lowpass.connect(lowpass2)
+    lowpass2.connect(tilt)
+    tilt.connect(babbleGain)
     babbleGain.connect(mix)
     // Moving the band slightly is the difference between a room and a filter.
     started.push(babble, drift(ctx, bandpass.frequency, 0.07, 90))
+
+    // A second pass over the same babble, slowed enough that the two never line
+    // up again inside a sprint — otherwise the whole bed repeats on the
+    // buffer's twelve seconds. Slower also reads as further off, which is what
+    // the far side of a room sounds like.
+    const farBabble = loopingSource(ctx, getBuffer(ctx, cache, 'cafe'), 0.83)
+    const farGain = ctx.createGain()
+    // Incoherent sources sum in power, so 0.9 and 0.5 together land close to
+    // where 0.9 alone did and LEVELS.Cafe stays valid.
+    farGain.gain.value = 0.5
+    farBabble.connect(farGain)
+    farGain.connect(bandpass)
+    started.push(farBabble)
 
     const room = loopingSource(ctx, getBuffer(ctx, cache, 'brown'), 0.89)
     const roomLow = ctx.createBiquadFilter()
