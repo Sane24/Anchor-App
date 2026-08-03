@@ -92,16 +92,21 @@ export default function Auth() {
 
 
     const handleGoogleSignIn = async () => {
-    setError('')
-    setBusy(true)
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-            redirectTo: redirectTarget(),
-        },
-    })
-    setBusy(false)
-    if (oauthError) setError(oauthError.message)
+        setError('')
+        setBusy(true)
+        const { error: oauthError } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: redirectTarget(),
+                scopes: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly',
+                queryParams: {
+                    access_type: 'offline',
+                    prompt: 'consent',
+                },
+            },
+        })
+        setBusy(false)
+        if (oauthError) setError(oauthError.message)
     }
 
     const handleSubmit = async (e) => {
