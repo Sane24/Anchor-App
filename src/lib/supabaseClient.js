@@ -10,3 +10,12 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: { flowType: 'pkce' },
 })
+
+// Catches the OAuth provider token the instant it's available — this must
+// live here, not in a React useEffect, because Supabase processes the
+// redirect's ?code= during client init, often before any component mounts.
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (session?.provider_token) {
+    localStorage.setItem('google_access_token', session.provider_token)
+  }
+})
