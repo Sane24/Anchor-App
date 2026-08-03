@@ -3,17 +3,13 @@ import { useEffect, useRef } from 'react'
 // Ambient sound for the focus timer, generated with the Web Audio API so the
 // app ships without any audio files.
 //
-// White and brown noise are exact — those are mathematical definitions, not
-// recordings. Cafe and Rain are built by layering: a base texture, a slow
-// modulation so the bed breathes instead of sitting still, and a second copy
-// of the loop at a detuned rate so the buffer's twelve seconds never announce
-// themselves.
+// Three of the four are noise. White and brown are exact — those are
+// mathematical definitions, not recordings. Rain layers a broadband sheet with
+// individual drops written into the PCM, over a detuned copy of itself so the
+// buffer's twelve seconds never announce themselves.
 //
-// Rain also writes individual drops into the PCM. Cafe deliberately does not
-// get the same treatment: a raindrop is a noise burst and two hundred of them
-// blur into texture, but a discrete tonal event — a cup on a saucer — stays
-// audible as itself, and a baked-in one repeats on every pass of the loop.
-// Periodic pings are the opposite of what a focus timer wants.
+// Cafe is not noise at all: it is the music a cafe plays, scheduled note by
+// note. See the section below for why that one cannot be a loop.
 //
 // To swap in real recordings later, replace buildSource() with a BufferSource
 // fed by fetch + decodeAudioData, keeping the same gain envelope.
@@ -25,23 +21,22 @@ const FADE_SECONDS = 0.18
 // textured presets, pushes the repeat past the point where you notice it.
 const BUFFER_SECONDS = 12
 
-// Control-rate for the babble envelope: it moves at syllable speed (a few Hz),
-// so computing it every 64 samples and interpolating is inaudible and saves
-// millions of sin() calls when the buffer is generated.
-const ENVELOPE_STEP = 64
 
 // Each preset loses a different amount of energy in its filters, so levels are
 // tuned per option so that switching does not jump in volume.
 //
 // Verified by tapping the graph at ctx.destination in the running app rather
-// than by reasoning about the gains: White 0.0270, Brown 0.0268, Cafe 0.0276,
-// Rain 0.0257 RMS — 7.4% between loudest and quietest, under a decibel. Peaks
-// stay near 0.11, far clear of clipping. Re-measure after touching any filter:
-// steepening Cafe's rolloff alone moved it 10%.
+// than by reasoning about the gains: White 0.0269, Brown 0.0268, Cafe 0.0272,
+// Rain 0.0259 RMS. Peaks stay near 0.12, far clear of clipping.
+//
+// Cafe is music, so it is the only one with real dynamics — it runs between
+// 0.017 and 0.035 across a chord cycle. Its number above is the average over a
+// full cycle, which is what makes it sit with the three steady ones. Measure it
+// over at least ten seconds or the reading is whatever the melody was doing.
 const LEVELS = {
   'White noise': 0.066,
   'Brown noise': 0.189,
-  Cafe: 0.278,
+  Cafe: 0.4,
   'Rain sound': 0.151,
 }
 
@@ -91,62 +86,151 @@ function fillRain(data, sampleRate) {
   }
 }
 
-// Cafe: speech-shaped noise under a syllabic envelope.
+// ---------- cafe: the music, not the crowd ----------
 //
-// Voice count is the whole ballgame. Five envelopes do not average out — they
-// beat against each other and the bed pulses at a few Hz, which reads as a
-// tremolo pedal rather than a room. Forty of them overlap into the steady
-// murmur you actually hear from across a cafe.
-const CAFE_VOICES = 40
+// Notes are scheduled on the clock rather than baked into a loop. A twelve
+// second buffer is fine for noise, but a repeating melody is the most obvious
+// loop there is — you hear the seam on the second pass. Scheduling means the
+// progression can run for a whole sprint without ever repeating exactly.
 
-// Mean of a half-wave rectified sine. The summed envelope settles here, so it
-// is what the swing below is measured against.
-const RECTIFIED_MEAN = 1 / Math.PI
+// Corner of the rolloff over the music. Low enough that nothing gets sharp,
+// high enough to leave the notes their first few harmonics.
+const CAFE_TOP = 2600
 
-// How far the bed is allowed to move around that mean.
-//
-// Voice count alone was not enough. Forty voices cut the envelope's spread by
-// sqrt(40/5) against the old five, but dividing by RECTIFIED_MEAN to get a
-// relative swing multiplies it back up by about the same factor — measured,
-// the bed still moved 19% either side of its mean, against 26% before. Halving
-// it here is what actually takes the pulse out: roughly 10%, which is life in
-// the bed rather than a tremolo on it.
-const CAFE_DEPTH = 0.55
+// One chord every eight seconds. Slow enough to sit behind work rather than
+// ask to be followed.
+const CHORD_SECONDS = 8
 
-// Corner of the two-pole rolloff over the babble. Lower is softer and further
-// away; much below this the consonant band goes with it and the room stops
-// reading as people and starts reading as wind.
-const CAFE_TOP = 1900
+// Fmaj7 - Dm7 - Gm7 - C7. A plain turnaround: every chord shares notes with
+// the next, so nothing lands as an event.
+const CHORDS = [
+  [53, 57, 60, 64],
+  [50, 53, 57, 60],
+  [55, 58, 62, 65],
+  [48, 52, 55, 58],
+]
 
-function fillCafe(data, sampleRate) {
-  const rates = []
-  const phases = []
-  for (let v = 0; v < CAFE_VOICES; v += 1) {
-    rates.push(2.5 + Math.random() * 3) // syllables per second
-    phases.push(Math.random() * Math.PI * 2)
+// F major pentatonic over the octave above the chords. Pentatonic has no
+// semitone clashes, so a note drawn at random can never sound wrong against
+// whichever chord happens to be under it.
+const MELODY = [65, 67, 69, 72, 74, 77]
+
+function mtof(midi) {
+  return 440 * 2 ** ((midi - 69) / 12)
+}
+
+// A struck note: a triangle for the body and a sine an octave up for the bit
+// of brightness at the attack, sharing one long exponential decay.
+function struck(ctx, dest, midi, at, seconds, level) {
+  const frequency = mtof(midi)
+
+  const envelope = ctx.createGain()
+  envelope.gain.setValueAtTime(0.0001, at)
+  envelope.gain.exponentialRampToValueAtTime(level, at + 0.03)
+  envelope.gain.exponentialRampToValueAtTime(0.0001, at + seconds)
+  envelope.connect(dest)
+
+  const body = ctx.createOscillator()
+  body.type = 'triangle'
+  body.frequency.value = frequency
+  body.connect(envelope)
+
+  const shimmer = ctx.createOscillator()
+  shimmer.type = 'sine'
+  shimmer.frequency.value = frequency * 2
+  const shimmerGain = ctx.createGain()
+  shimmerGain.gain.value = 0.3
+  shimmer.connect(shimmerGain)
+  shimmerGain.connect(envelope)
+
+  body.start(at)
+  shimmer.start(at)
+  body.stop(at + seconds + 0.05)
+  shimmer.stop(at + seconds + 0.05)
+}
+
+// The chord underneath, faded in and out slowly enough that changes are felt
+// rather than heard.
+function pad(ctx, dest, midis, at, seconds, level) {
+  midis.forEach((midi) => {
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.value = mtof(midi)
+
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.0001, at)
+    gain.gain.exponentialRampToValueAtTime(level, at + 1.6)
+    gain.gain.setValueAtTime(level, at + seconds - 1.6)
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + seconds)
+
+    osc.connect(gain)
+    gain.connect(dest)
+    osc.start(at)
+    osc.stop(at + seconds + 0.05)
+  })
+}
+
+// A room, built from a decaying noise burst. Convolving the music with this is
+// most of what separates "cafe" from "synthesiser".
+function makeReverb(ctx, seconds = 2.4, decay = 3.2) {
+  const length = Math.floor(ctx.sampleRate * seconds)
+  const impulse = ctx.createBuffer(2, length, ctx.sampleRate)
+  for (let channel = 0; channel < 2; channel += 1) {
+    const data = impulse.getChannelData(channel)
+    for (let i = 0; i < length; i += 1) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / length) ** decay
+    }
+  }
+  const convolver = ctx.createConvolver()
+  convolver.buffer = impulse
+  return convolver
+}
+
+// Keeps one chord queued ahead of the clock. Exposes start/stop so it can sit
+// in the same `started` list as the oscillators and buffer sources, and be
+// torn down by the same loop.
+function cafeMusic(ctx, dest) {
+  const LOOKAHEAD = 1.5
+  let timer = null
+  let nextAt = 0
+  let step = 0
+
+  function schedule() {
+    while (nextAt < ctx.currentTime + LOOKAHEAD) {
+      const chord = CHORDS[step % CHORDS.length]
+      pad(ctx, dest, chord, nextAt, CHORD_SECONDS, 0.05)
+
+      // Two to four notes at random offsets — off any grid, so the ear never
+      // finds a pulse to lock onto.
+      const notes = 2 + Math.floor(Math.random() * 3)
+      for (let n = 0; n < notes; n += 1) {
+        struck(
+          ctx,
+          dest,
+          MELODY[Math.floor(Math.random() * MELODY.length)],
+          nextAt + Math.random() * (CHORD_SECONDS - 1.5),
+          2.6 + Math.random() * 1.6,
+          0.11
+        )
+      }
+
+      nextAt += CHORD_SECONDS
+      step += 1
+    }
   }
 
-  let previous = 0
-  let next = 0
-  for (let i = 0; i < data.length; i += 1) {
-    if (i % ENVELOPE_STEP === 0) {
-      previous = next
-      const t = (i + ENVELOPE_STEP) / sampleRate
-      let sum = 0
-      for (let v = 0; v < CAFE_VOICES; v += 1) {
-        // Half-wave rectified: a syllable is on, then it is not.
-        sum += Math.max(0, Math.sin(t * rates[v] * 2 * Math.PI + phases[v]))
-      }
-      next = sum / CAFE_VOICES
-    }
-    const blend = (i % ENVELOPE_STEP) / ENVELOPE_STEP
-    const envelope = previous + (next - previous) * blend
-    const swing = (envelope - RECTIFIED_MEAN) / RECTIFIED_MEAN
-    // Floored so a rare deep trough thins the bed instead of punching a hole.
-    const level = Math.max(0.2, 1 + CAFE_DEPTH * swing)
-    // 0.29 holds the same RMS the old (0.25 + 0.75 * envelope) * 0.6 produced,
-    // so LEVELS.Cafe still lands with the other three presets.
-    data[i] = (Math.random() * 2 - 1) * level * 0.29
+  return {
+    start() {
+      nextAt = ctx.currentTime + 0.15
+      schedule()
+      timer = setInterval(schedule, 400)
+    },
+    // Notes already queued run on under the master fade-out, which is what
+    // stops the cut from clicking.
+    stop() {
+      if (timer) clearInterval(timer)
+      timer = null
+    },
   }
 }
 
@@ -154,7 +238,6 @@ const FILLS = {
   white: fillWhite,
   brown: fillBrown,
   rain: fillRain,
-  cafe: fillCafe,
 }
 
 // Generating a 12-second stereo buffer costs real milliseconds, so each kind is
@@ -243,62 +326,39 @@ function buildSource(ctx, cache, selection) {
   }
 
   if (selection === 'Cafe') {
-    // Babble sits in the speech band. Anything above it starts to sound like
-    // words you should be able to make out, which is the distracting part.
-    const babble = loopingSource(ctx, getBuffer(ctx, cache, 'cafe'))
-    const bandpass = ctx.createBiquadFilter()
-    bandpass.type = 'bandpass'
-    bandpass.frequency.value = 700
-    bandpass.Q.value = 0.6
-    // The bed underneath is white noise, so it carries as much energy at 4 kHz
-    // as at 400. One biquad at 3400 rolls off at 12 dB/oct and leaves plenty of
-    // 2–4 kHz standing — which is exactly where the ear is most sensitive, and
-    // why this read as hissy rather than distant. Two in series at a lower
-    // corner gives 24 dB/oct and takes that band down properly.
-    const lowpass = ctx.createBiquadFilter()
-    lowpass.type = 'lowpass'
-    lowpass.frequency.value = CAFE_TOP
-    const lowpass2 = ctx.createBiquadFilter()
-    lowpass2.type = 'lowpass'
-    lowpass2.frequency.value = CAFE_TOP
-    // A shelf rather than a third pole: keeps a little air so the room does not
-    // sound like it is behind a closed door.
-    const tilt = ctx.createBiquadFilter()
-    tilt.type = 'highshelf'
-    tilt.frequency.value = 1600
-    tilt.gain.value = -5
-    const babbleGain = ctx.createGain()
-    // Raised to make back the energy the steeper rolloff removes; the level
-    // check below confirms Cafe still sits with the other three.
-    babbleGain.gain.value = 1.5
-    babble.connect(bandpass)
-    bandpass.connect(lowpass)
-    lowpass.connect(lowpass2)
-    lowpass2.connect(tilt)
-    tilt.connect(babbleGain)
-    babbleGain.connect(mix)
-    // Moving the band slightly is the difference between a room and a filter.
-    started.push(babble, drift(ctx, bandpass.frequency, 0.07, 90))
+    // The music bus. Everything the scheduler plays lands here first so one
+    // filter and one reverb serve every note.
+    const instrument = ctx.createGain()
 
-    // A second pass over the same babble, slowed enough that the two never line
-    // up again inside a sprint — otherwise the whole bed repeats on the
-    // buffer's twelve seconds. Slower also reads as further off, which is what
-    // the far side of a room sounds like.
-    const farBabble = loopingSource(ctx, getBuffer(ctx, cache, 'cafe'), 0.83)
-    const farGain = ctx.createGain()
-    // Incoherent sources sum in power, so 0.9 and 0.5 together land close to
-    // where 0.9 alone did and LEVELS.Cafe stays valid.
-    farGain.gain.value = 0.5
-    farBabble.connect(farGain)
-    farGain.connect(bandpass)
-    started.push(farBabble)
+    const tone = ctx.createBiquadFilter()
+    tone.type = 'lowpass'
+    tone.frequency.value = CAFE_TOP
+    instrument.connect(tone)
 
+    // Dry and wet in parallel rather than in series: all-wet loses the attack
+    // of each note and the whole thing turns to mush.
+    const dry = ctx.createGain()
+    dry.gain.value = 0.7
+    tone.connect(dry)
+    dry.connect(mix)
+
+    const reverb = makeReverb(ctx)
+    const wet = ctx.createGain()
+    wet.gain.value = 0.45
+    tone.connect(reverb)
+    reverb.connect(wet)
+    wet.connect(mix)
+
+    started.push(cafeMusic(ctx, instrument))
+
+    // A little room tone under the music. Without it the music sits in a
+    // vacuum and reads as headphones rather than somewhere with tables in it.
     const room = loopingSource(ctx, getBuffer(ctx, cache, 'brown'), 0.89)
     const roomLow = ctx.createBiquadFilter()
     roomLow.type = 'lowpass'
-    roomLow.frequency.value = 260
+    roomLow.frequency.value = 320
     const roomGain = ctx.createGain()
-    roomGain.gain.value = 0.6
+    roomGain.gain.value = 0.35
     room.connect(roomLow)
     roomLow.connect(roomGain)
     roomGain.connect(mix)
