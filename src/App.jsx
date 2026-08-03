@@ -45,7 +45,12 @@ export default function App() {
       if (event === 'PASSWORD_RECOVERY') {
         navigate('/auth', { state: { reset: true } })
       }
-
+      // Bridge: if Google sign-in returned Calendar/Gmail scopes, store the
+      // provider token where googleData.js already looks for it.
+      if (session?.provider_token) {
+        localStorage.setItem('google_access_token', session.provider_token)
+      }
+      
       if (session?.user) {
         setUser(session.user.user_metadata?.full_name || session.user.email)
         // Signing in pulls this account's data and merges it with what's on

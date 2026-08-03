@@ -392,8 +392,19 @@ export default function Briefing() {
           })}
         </div>
       </section>
-
-      <div className="briefing-finish">
+      
+      <div
+        className="briefing-finish"
+        style={{
+          position: 'sticky',
+          bottom: 'calc(var(--tabbar-h) + 12px)',
+          background: 'var(--card)',
+          border: '1px solid var(--line)',
+          borderRadius: '15px',
+          padding: '10px 12px',
+          boxShadow: 'var(--shadow-card)',
+        }}
+      >
         <button
           type="button"
           disabled={selectedIds.length === 0}

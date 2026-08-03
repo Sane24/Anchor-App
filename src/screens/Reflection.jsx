@@ -300,10 +300,18 @@ export default function Reflection() {
                 inputMode="numeric"
                 min="0"
                 step="100"
+                list="step-suggestions"
                 value={steps}
                 onChange={(event) => setSteps(event.target.value)}
                 placeholder="From your phone, if you like"
               />
+              <datalist id="step-suggestions">
+                <option value="1000" />
+                <option value="2500" />
+                <option value="5000" />
+                <option value="7500" />
+                <option value="10000" />
+              </datalist>
             </label>
 
             <button className="reflect-close-btn" type="submit">

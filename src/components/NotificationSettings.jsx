@@ -61,18 +61,23 @@ export default function NotificationSettings() {
 
   /* ---- not asked yet ---- */
   if (permission !== 'granted') {
-    return (
-      <div className="card">
-        <p className="eyebrow">Reminders</p>
-        <p className="card-section-note">
-          Get a nudge for your morning briefing and night reflection.
-        </p>
-        <button type="button" className="btn-week-primary" onClick={enable}>
-          Enable notifications
-        </button>
-      </div>
-    )
-  }
+  return (
+    <div className="card">
+      <p className="eyebrow">Reminders</p>
+      <p className="card-section-note">
+        Get a nudge for your morning briefing and night reflection.
+      </p>
+      <button
+        type="button"
+        className="btn-week-primary"
+        onClick={enable}
+        style={{ marginTop: '12px' }}
+      >
+        Enable notifications
+      </button>
+    </div>
+  )
+}
 
   /* ---- granted ---- */
   return (

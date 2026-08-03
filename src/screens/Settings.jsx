@@ -146,7 +146,7 @@ export default function Settings({ user, onLogout }) {
       </div>
 
       <div className="card">
-        <h3 className="card-section-title">Appearance</h3>
+        <p className="eyebrow">Appearance</p>
         <p className="card-section-note">
           Pick an accent color for buttons, highlights, and the active tab.
         </p>
@@ -167,12 +167,11 @@ export default function Settings({ user, onLogout }) {
         </div>
       </div>
 
-
       <NotificationSettings />
-      
+
       <div className="card">
-        <p className="eyebrow">Accounts Connected</p>
-        <p>Pulls calendar events and unread email as tasks.</p>
+        <p className="eyebrow">Connections</p>
+        <p className="card-section-note">Pulls calendar events and unread email as tasks.</p>
 
         {isGoogleConfigured ? (
           <GoogleConnection />
