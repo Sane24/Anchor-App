@@ -22,6 +22,52 @@ Intended Users: Students, recent graduates, and independent learners
 looking for a minimalist, low-friction task management tool that prioritizes
 clarity, focus, and daily reflection over endless accumulation of stress.
 
+## What it does
+
+**Today** — your three Anchors for the day, each with one small first step.
+Check them off, swipe to complete or delete, push one to tomorrow, or tap
+"I started" — starting counts. Underneath: what's actually due today, and
+what's on your calendar.
+
+**Morning briefing** — scans your calendar and unread mail, puts everything on
+one page, and asks you to pick up to three. Each pick gets a suggested first
+step you can edit or reshuffle. Last night's note to yourself sits at the top.
+
+**This Week** — the next seven days on one scrolling page, with a strip to jump
+between them. The weekly briefing scans seven days of calendar and mail at
+once. Anything on the week can be added, edited, or deleted.
+
+**Focus sprint** — a Pomodoro cycle (focus, short break, long break every four
+rounds) on a dial you can scroll, drag, or arrow-key. The timer keeps running
+when you leave the screen and survives a refresh. Optional ambient sound:
+white noise, brown noise, rain, or a cafe.
+
+**Reflection** — close the day. See what landed, then decide for each
+unfinished Anchor: move it to tomorrow, or let it go on purpose. Leave a note
+for tomorrow-you, log sleep and steps, and drop one thing into the morning so
+you never start from a blank page.
+
+**Garden** — a small world that grows out of what you actually did. Focus
+minutes grow an oak, landed Anchors bloom as wildflowers (a different species
+per source), comebacks open water lilies, and every sprint adds a koi to the
+pond. Walk into it and tap anything to see which task grew it.
+
+**Throughout** — reminders for the morning briefing and the night reflection,
+with an in-app catch-up if you missed the window; dark mode and accent themes;
+and an optional account that syncs plans, journal, and sessions across devices.
+The whole app works signed out.
+
+## Tech stack
+
+React 18 + Vite, React Router (HashRouter, so it deploys to GitHub Pages),
+Supabase for accounts and sync, read-only Google Calendar and Gmail APIs, and
+the Web Audio API for the ambient sound. No backend of our own.
+
+## Docs
+
+- [Official User Manual](%5BAnchor%5D%20Official%20User%20Manual.pdf) — the full walkthrough, screen by screen
+- [Privacy policy](privacy-policy.md) — what Anchor reads from your Google account, and what it does with it
+
 ## FAQs
 
 1)Can other users see my tasks or progress?
@@ -40,7 +86,7 @@ Need Node 18+ installed.
 
 ```bash
 npm install
-cp .env.example .env    # first time only — Google sign-in needs this
+cp .env.example .env    # first time only — Google sign-in and sync need this
 npm run dev
 ```
 
@@ -52,29 +98,71 @@ npm run build     # production build into dist/
 npm run preview   # preview the production build
 ```
 
+### Accounts and sync (optional)
+
+Signing in is optional — without it Anchor keeps everything in your browser and
+every screen still works. Sync needs a Supabase project:
+
+1. Run `supabase/schema.sql` in your project's SQL editor. It creates the three
+   tables (`day_plans`, `journal_entries`, `focus_sessions`) and the row-level
+   security policies that make each user's rows readable only by that user. The
+   file is safe to re-run.
+2. Put your project URL and publishable key in `.env` as `VITE_SUPABASE_URL`
+   and `VITE_SUPABASE_ANON_KEY`.
+
+localStorage stays the source of truth either way. Signing in pulls your
+account's data down, merges it with whatever is already on the device, and
+mirrors later writes up in the background. Signing out just stops the
+mirroring — nothing local is deleted.
+
 ## Where things live
 
 ```
 src/
-  main.jsx              entry point, router setup
-  App.jsx               all routes in one place
+  main.jsx              entry point — router, Google provider, theme init
+  App.jsx               all routes + auth session wiring
+  store.js              localStorage source of truth: day plans, journal, sessions
+  firstSteps.js         keyword → smallest-first-step suggestions
+  notifications.js      reminder scheduler + in-app catch-up layer
   components/
-    AppHeader.jsx       logo + tagline + settings link
+    AppHeader.jsx       logo (home), user name, ambient sound, dark-mode toggle
     TabBar.jsx          the 5 bottom tabs
-    Placeholder.jsx     temporary stand-in for unbuilt screens
-    GardenScene.jsx     the hand-drawn SVG garden landscape (Garden tab)
+    GardenScene.jsx     the hand-drawn SVG garden landscape
+    GardenImmersive.jsx full-screen walk-in garden, tap anything to read its story
+    TimerPopup.jsx      mini countdown shown on the other tabs
+    ReminderNudge.jsx   catch-up reminder banner
+    NotificationSettings.jsx  reminder card inside Settings
+    AmbientSoundSheet.jsx     white / brown / cafe / rain picker
+    SwipeRow.jsx        swipe to complete or delete
     icons.jsx           all inline SVG icons
   screens/
-    Today.jsx           TAB 1
-    Garden.jsx          TAB 2
-    ThisWeek.jsx        TAB 3
-    Reflection.jsx      TAB 4
-    Settings.jsx        TAB 5
-    Briefing.jsx        opened from Today, not a tab
-    Timer.jsx           opened from an anchor, not a tab
+    Today.jsx           TAB 1 — top 3 anchors, due today, calendar
+    Garden.jsx          TAB 2 — progression grown from real sessions
+    ThisWeek.jsx        TAB 3 — 7-day view + weekly briefing
+    Reflection.jsx      TAB 4 — night close-out, rollover, journal
+    Settings.jsx        TAB 5 — account, theme, reminders, Google
+    Briefing.jsx        morning briefing — opened from Today, not a tab
+    Timer.jsx           focus sprint — opened from an anchor, not a tab
+    Auth.jsx            sign in / sign up / reset password
+    weekSampleData.js   week data layer: samples, Google imports, user edits
+  data/
+    googleAuth.js       Google OAuth token handling
+    googleData.js       read-only Gmail + Calendar scans
+    gmailFilter.js      which unread mail is worth becoming a task
+    sync.js             optional Supabase mirror (local-first)
+  hooks/
+    useFocusSession.jsx timer state, lives above the router so it survives tabs
+    useAmbientSound.js  Web Audio ambience — no audio files shipped
+    useThemeColor.js    dark mode + accent themes
+  lib/
+    supabaseClient.js   Supabase client
   styles/
-    tokens.css          colors, fonts, logo, spacing — from the Figma
+    tokens.css          colors, fonts, spacing — from the Figma
     app.css             app shell, header, tab bar, cards
+    week.css            This Week screen
+supabase/
+  schema.sql            tables + row-level security for account sync
+public/                 icons and manifest — installable on a phone
 ```
 
 ## Files
