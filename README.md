@@ -22,14 +22,13 @@ Intended Users: Students, recent graduates, and independent learners
 looking for a minimalist, low-friction task management tool that prioritizes
 clarity, focus, and daily reflection over endless accumulation of stress.
 
-## What it does
+## feature list
 
 **Today** — your three Anchors for the day, each with one small first step.
 Check them off, swipe to complete or delete, push one to tomorrow, or tap
-"I started" — starting counts. Underneath: what's actually due today, and
-what's on your calendar.
+"I started". Underneath: what's actually due today, and what's on your calendar.
 
-**Morning briefing** — scans your calendar and unread mail, puts everything on
+**Morning briefing** — scans your calendar and gmail, puts everything on
 one page, and asks you to pick up to three. Each pick gets a suggested first
 step you can edit or reshuffle. Last night's note to yourself sits at the top.
 
@@ -61,7 +60,7 @@ The whole app works signed out.
 
 React 18 + Vite, React Router (HashRouter, so it deploys to GitHub Pages),
 Supabase for accounts and sync, read-only Google Calendar and Gmail APIs, and
-the Web Audio API for the ambient sound. No backend of our own.
+the Web Audio API for the ambient sound. 
 
 ## Docs
 
@@ -70,7 +69,7 @@ the Web Audio API for the ambient sound. No backend of our own.
 
 ## FAQs
 
-1)Can other users see my tasks or progress?
+1) Can other users see my tasks or progress?
 No. Your plans, reflections, and focus sessions are private to your
 account.
 2) What happens to tasks I don't complete?
@@ -101,19 +100,7 @@ npm run preview   # preview the production build
 ### Accounts and sync (optional)
 
 Signing in is optional — without it Anchor keeps everything in your browser and
-every screen still works. Sync needs a Supabase project:
-
-1. Run `supabase/schema.sql` in your project's SQL editor. It creates the three
-   tables (`day_plans`, `journal_entries`, `focus_sessions`) and the row-level
-   security policies that make each user's rows readable only by that user. The
-   file is safe to re-run.
-2. Put your project URL and publishable key in `.env` as `VITE_SUPABASE_URL`
-   and `VITE_SUPABASE_ANON_KEY`.
-
-localStorage stays the source of truth either way. Signing in pulls your
-account's data down, merges it with whatever is already on the device, and
-mirrors later writes up in the background. Signing out just stops the
-mirroring — nothing local is deleted.
+every screen still works. Sync needs a Supabase project. localStorage stays the source of truth either way. Signing in pulls your account's data down, merges it with whatever is already on the device, and mirrors later writes up in the background. Signing out just stops the mirroring — nothing local is deleted.
 
 ## Where things live
 
