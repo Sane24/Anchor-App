@@ -5,6 +5,32 @@ Pull all tasks and events from google calendar and gmail.
 
 CS160 Summer 2026 final project.
 
+Between revising for the upcoming quiz, finishing other
+assignments across multiple classes, and managing commitments outside
+of school, when you do not even know where to begin, and doomscrolling will not
+help you progress any further. Introducing to you, Anchor, an application that is built to help you in these times of decision fatigue. Instead of being overwhelmed with listing your endless amount of tasks and having them lost after , Anchor operates on a
+simple, grounded philosophy: you will steady the day by limiting your daily
+focus to 3 core tasks, or what we like to call, "Anchors."
+As you constrain your daily targets to what matters most on the current
+day, Anchor will break the paralysis of what to start, reduce cognitive
+overload, and help turn your stressful and chaotic study sessions into
+calm, intentional progress.
+Intended Users: Students, recent graduates, and independent learners
+looking for a minimalist, low-friction task management tool that prioritizes
+clarity, focus, and daily reflection over endless accumulation of stress.
+
+## FAQs
+
+1)Can other users see my tasks or progress?
+No. Your plans, reflections, and focus sessions are private to your
+account.
+2) What happens to tasks I don't complete?
+They roll over automatically and appear as suggestions in the next
+day's Morning Briefing.
+3) Can I add another task after having three added already?
+You can only add at most 3 tasks to start with, as we don't want you to be
+overwhelmed with too many tasks.
+
 ## Run it
 
 Need Node 18+ installed.
