@@ -91,10 +91,9 @@ Work only in your own files. If you need a change in a shared file, ask its owne
 | Save/load code + focus timer + 1st step suggestion | `src/store.js` (to be added), `screens/Timer.jsx` 
 | This Week  | `screens/ThisWeek.jsx`, 
 | Garden + deploy | `screens/Garden.jsx`
+
 ## Building your screen
 
-Every screen currently renders a `<Placeholder />`. Replace it with real content.
-Use the existing classes so everything stays consistent:
 
 - `.screen` — the page wrapper (already there, keep it)
 - `.card` — standard cream card
@@ -108,7 +107,7 @@ Colors and fonts come from CSS variables in `tokens.css` — use
 
 ## Working together rules (git)
 
-1. **Pull before you start.** `git pull` — every single time you sit down.
+1. **Pull before you start.** `git pull` — every single time you start.
 2. **Pull again before you push.** Someone probably pushed while you worked.
 3. **Push when you finish a chunk**, not once at the end of the day.
 
