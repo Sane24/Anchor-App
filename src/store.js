@@ -268,6 +268,101 @@ export function saveJournalEntry(changes, date = new Date()) {
   return entry
 }
 
+// ---------- Brain dump ----------
+// One always-open place to get a thought out of your head. Capture asks for
+// nothing but the text — naming it a task or a worry is optional, and can
+// happen later or never. Sorting is friction, and friction is what stops the
+// thought leaving your head at all.
+//
+// Stored in the order it's shown. A new thought goes on top, and dragging a
+// row rewrites this array — so the list is whatever order you last left it in,
+// and an undo can put a cleared thought back exactly where it was.
+//
+// afterWrite fires with kind 'dump', which sync.js has no branch for yet — it
+// ignores unknown kinds, so the dump stays on this device until a table exists.
+
+const DUMP_KEY = 'anchor_braindump_v1'
+
+export const DUMP_KINDS = ['task', 'worry', 'idea', 'reminder', 'feeling', 'later']
+
+function readDumps() {
+  try {
+    const raw = localStorage.getItem(DUMP_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch (err) {
+    console.error('Could not read the brain dump:', err)
+    return []
+  }
+}
+
+function writeDumps(dumps) {
+  try {
+    localStorage.setItem(DUMP_KEY, JSON.stringify(dumps))
+  } catch (err) {
+    console.error('Could not save the brain dump:', err)
+  }
+}
+
+export function loadDumps() {
+  return readDumps()
+}
+
+export function addDump(text) {
+  const entry = {
+    id: `dump-${Date.now()}`,
+    text,
+    kind: null,
+    createdAt: new Date().toISOString(),
+  }
+  const dumps = [entry, ...readDumps()]
+  writeDumps(dumps)
+  afterWrite('dump', entry)
+  return dumps
+}
+
+// Commits a reordered list. The screen shuffles rows live while a drag is in
+// flight and calls this once on drop, so dragging across five rows is one
+// write rather than five. Takes ids rather than whole entries so a stale
+// screen can only reorder what's already saved, never resurrect or edit it.
+export function saveDumpOrder(orderedIds) {
+  const current = readDumps()
+  const byId = new Map(current.map((entry) => [entry.id, entry]))
+  const ordered = orderedIds.map((id) => byId.get(id)).filter(Boolean)
+  const placed = new Set(ordered.map((entry) => entry.id))
+  // Anything the screen didn't know about (added in another tab) keeps its
+  // place at the end instead of being dropped.
+  const next = [...ordered, ...current.filter((entry) => !placed.has(entry.id))]
+  writeDumps(next)
+  return next
+}
+
+export function updateDump(id, changes) {
+  const dumps = readDumps().map((entry) =>
+    entry.id === id ? { ...entry, ...changes } : entry
+  )
+  writeDumps(dumps)
+  const updated = dumps.find((entry) => entry.id === id)
+  if (updated) afterWrite('dump', updated)
+  return dumps
+}
+
+export function removeDump(id) {
+  const dumps = readDumps().filter((entry) => entry.id !== id)
+  writeDumps(dumps)
+  return dumps
+}
+
+// Puts a cleared thought back where it was. Callers offer this as undo rather
+// than asking "are you sure?" before every clear.
+export function restoreDump(entry, index) {
+  const dumps = readDumps()
+  if (dumps.some((item) => item.id === entry.id)) return dumps
+  dumps.splice(Math.min(index, dumps.length), 0, entry)
+  writeDumps(dumps)
+  return dumps
+}
+
 export function loadSessions() {
   try {
     const raw = localStorage.getItem(SESSIONS_KEY)

@@ -1,20 +1,37 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { EditIcon, RepeatIcon, TrashIcon } from '../components/icons'
+import { EditIcon, GripIcon, RepeatIcon, TrashIcon } from '../components/icons'
 import SwipeRow from '../components/SwipeRow'
 import { useFocusSession } from '../hooks/useFocusSession'
 import {
+  DUMP_KINDS,
+  addDump,
   dayKey,
   loadDayPlan,
+  loadDumps,
   moveAnchorToTomorrow,
+  removeDump,
   removeTodayAnchor,
+  restoreDump,
   saveDayPlan,
+  saveDumpOrder,
+  updateDump,
   updateTodayAnchor,
 } from '../store'
 import { nextFirstStep, suggestFirstStep } from '../firstSteps'
 import { getWeekData } from './weekSampleData'
 
 const MAX_ANCHORS = 3
+
+// How each brain-dump tag reads on screen. The keys are the stored values.
+const DUMP_LABELS = {
+  task: 'Task',
+  worry: 'Worry',
+  idea: 'Idea',
+  reminder: 'Reminder',
+  feeling: 'Feeling',
+  later: 'Later',
+}
 
 // Same 12-hour format This Week uses, so a task reads identically on both.
 function clockTime(value) {
@@ -61,6 +78,18 @@ export default function Today() {
   const [week, setWeek] = useState(null)
   // The last removed anchor, kept only in memory so the notice can put it back.
   const [undoRemoved, setUndoRemoved] = useState(null)
+
+  // Brain dump. Its own notice rather than the one at the top of the screen —
+  // an undo you can't see because it's three sections above you isn't an undo.
+  const [dumps, setDumps] = useState(loadDumps)
+  const [dumpText, setDumpText] = useState('')
+  const [openDumpId, setOpenDumpId] = useState(null)
+  const [dumpNotice, setDumpNotice] = useState(null) // { text, undo }
+  // Reorder drag: the index the pointer currently holds, and the live order.
+  // Both are refs because a drag reads them mid-gesture, between renders.
+  const dragFrom = useRef(null)
+  const dragOrder = useRef([])
+  const [draggingId, setDraggingId] = useState(null)
 
   // Today's rows come from the same source as This Week, so the two screens
   // can't disagree about what's due.
@@ -193,6 +222,134 @@ export default function Today() {
   function dismissNotice() {
     setNotice('')
     setUndoRemoved(null)
+  }
+
+  // ---------- brain dump ----------
+
+  function addThought(event) {
+    event.preventDefault()
+    const text = dumpText.trim()
+    if (!text) return
+    setDumps(addDump(text))
+    setDumpText('')
+    setDumpNotice(null)
+  }
+
+  // Tapping the tag a thought already has clears it, so nothing is stuck in a
+  // category you regret picking.
+  function tagThought(entry, kind) {
+    setDumps(updateDump(entry.id, { kind: entry.kind === kind ? null : kind }))
+  }
+
+  function clearThought(entry) {
+    const index = dumps.findIndex((item) => item.id === entry.id)
+    setDumps(removeDump(entry.id))
+    setOpenDumpId(null)
+    setDumpNotice({
+      text: 'Cleared.',
+      undo: () => {
+        setDumps(restoreDump(entry, index))
+        setDumpNotice(null)
+      },
+    })
+  }
+
+  // ---------- reordering the dump ----------
+  // The drag lives on its own handle rather than on the row: the row is a tap
+  // target that opens the tags, and one element can't be both without the two
+  // gestures fighting each other. Pointer Events cover thumb and mouse in one
+  // path, the same way SwipeRow does.
+
+  function moveThought(from, to) {
+    if (to < 0 || to >= dragOrder.current.length || to === from) return null
+    const next = [...dragOrder.current]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    dragOrder.current = next
+    setDumps(next)
+    return next
+  }
+
+  function startDrag(event, index) {
+    if (!event.isPrimary) return
+    dragFrom.current = index
+    dragOrder.current = dumps
+    setDraggingId(dumps[index].id)
+    setOpenDumpId(null) // a row shouldn't stay open while it's moving
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    } catch {
+      /* pointer already gone */
+    }
+  }
+
+  function dragOver(event) {
+    if (dragFrom.current == null) return
+    // Hit-test for the row under the finger. Row heights vary — long text
+    // wraps — so this beats measuring positions once and working from a
+    // snapshot that goes stale after the first swap.
+    const over = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest('[data-dump-index]')
+    if (!over) return
+
+    const to = Number(over.dataset.dumpIndex)
+    if (Number.isNaN(to)) return
+    if (moveThought(dragFrom.current, to)) dragFrom.current = to
+  }
+
+  function endDrag(event) {
+    if (dragFrom.current == null) return
+    dragFrom.current = null
+    setDraggingId(null)
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    } catch {
+      /* nothing captured */
+    }
+    // One write for the whole gesture, not one per row crossed.
+    setDumps(saveDumpOrder(dragOrder.current.map((entry) => entry.id)))
+  }
+
+  function cancelDrag() {
+    dragFrom.current = null
+    setDraggingId(null)
+    setDumps(loadDumps())
+  }
+
+  // Arrow keys do the same job without a pointer. React keys the rows by id,
+  // so the focused handle moves with its row and stays focused.
+  function nudgeThought(event, index) {
+    const delta = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
+    if (!delta) return
+    event.preventDefault()
+    dragOrder.current = dumps
+    const next = moveThought(index, index + delta)
+    if (next) setDumps(saveDumpOrder(next.map((entry) => entry.id)))
+  }
+
+  // A thought that turned out to be a real task can become one of today's
+  // three. This is the only reason the dump needs sorting at all — everything
+  // else in here is allowed to just sit there.
+  function makeAnchor(entry) {
+    if (plan.anchors.length >= MAX_ANCHORS) return
+    setPlan(saveDayPlan({
+      ...plan,
+      anchors: [
+        ...plan.anchors,
+        {
+          id: `fromdump-${Date.now()}`,
+          title: entry.text,
+          firstStep: suggestFirstStep(entry.text, 'manual'),
+          source: 'manual',
+          completed: false,
+          startedAt: null,
+        },
+      ],
+    }))
+    setDumps(removeDump(entry.id))
+    setOpenDumpId(null)
+    setDumpNotice({ text: `“${entry.text}” is one of today’s anchors now.`, undo: null })
   }
 
   const today = dayKey()
@@ -467,6 +624,142 @@ export default function Today() {
             <span className="today-info-label">{event.title}</span>
           </div>
         ))}
+      </section>
+
+      {/* Brain dump. Last on the page on purpose: the three anchors are what
+          today is about, and this is the place everything else can go so it
+          stops competing with them. */}
+      <section className="card today-dump">
+        <p className="eyebrow">Brain dump</p>
+        <p className="today-dump-help">
+          Get it out of your head now. Sorting it is optional, and it can wait.
+        </p>
+
+        <form className="today-dump-add" onSubmit={addThought}>
+          <input
+            type="text"
+            value={dumpText}
+            placeholder="A task, a worry, an idea…"
+            aria-label="Add to your brain dump"
+            onChange={(event) => setDumpText(event.target.value)}
+          />
+          <button className="btn-primary" type="submit" disabled={!dumpText.trim()}>
+            Add
+          </button>
+        </form>
+
+        {dumpNotice && (
+          <div className="today-notice today-dump-notice" role="status">
+            <span>{dumpNotice.text}</span>
+            {dumpNotice.undo && (
+              <button className="today-notice-undo" type="button" onClick={dumpNotice.undo}>
+                Undo
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label="Dismiss message"
+              onClick={() => setDumpNotice(null)}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {dumps.length === 0 ? (
+          <p className="today-dump-empty">
+            Nothing here yet. This is the place for whatever you don’t want to keep holding.
+          </p>
+        ) : (
+          <ul className="today-dump-list">
+            {/* A new thought lands on top, and dragging a handle rewrites the
+                order from there — so the list stays however you left it. */}
+            {dumps.map((entry, index) => {
+              const open = openDumpId === entry.id
+              const lifted = draggingId === entry.id
+              return (
+                <li
+                  key={entry.id}
+                  data-dump-index={index}
+                  className={[
+                    'today-dump-item',
+                    open ? 'open' : '',
+                    lifted ? 'lifted' : '',
+                  ].join(' ').trim()}
+                >
+                  <div className="today-dump-main">
+                    <button
+                      className="today-dump-handle"
+                      type="button"
+                      aria-label={`Reorder “${entry.text}”. Use the arrow keys, or drag.`}
+                      onPointerDown={(event) => startDrag(event, index)}
+                      onPointerMove={dragOver}
+                      onPointerUp={endDrag}
+                      onPointerCancel={cancelDrag}
+                      onKeyDown={(event) => nudgeThought(event, index)}
+                      onDragStart={(event) => event.preventDefault()}
+                    >
+                      <GripIcon size={14} />
+                    </button>
+
+                    {/* Tapping opens the tags and actions. The resting row stays
+                        calm, and nothing that removes a thought is one stray tap
+                        away — same reasoning as the anchor cards above. */}
+                    <button
+                      className="today-dump-row"
+                      type="button"
+                      aria-expanded={open}
+                      onClick={() => setOpenDumpId(open ? null : entry.id)}
+                    >
+                      <span className="today-dump-text">{entry.text}</span>
+                      {entry.kind && (
+                        <span className="today-dump-tag">{DUMP_LABELS[entry.kind]}</span>
+                      )}
+                    </button>
+                  </div>
+
+                  {open && (
+                    <div className="today-dump-detail">
+                      <div className="reflect-chips" role="group" aria-label={`Sort “${entry.text}”`}>
+                        {DUMP_KINDS.map((kind) => (
+                          <button
+                            key={kind}
+                            className={entry.kind === kind ? 'reflect-chip active' : 'reflect-chip'}
+                            type="button"
+                            aria-pressed={entry.kind === kind}
+                            onClick={() => tagThought(entry, kind)}
+                          >
+                            {DUMP_LABELS[kind]}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="today-dump-actions">
+                        {plan.anchors.length < MAX_ANCHORS && (
+                          <button
+                            className="btn-ghost"
+                            type="button"
+                            onClick={() => makeAnchor(entry)}
+                          >
+                            Make it an anchor
+                          </button>
+                        )}
+                        <button
+                          className="today-dump-clear"
+                          type="button"
+                          onClick={() => clearThought(entry)}
+                        >
+                          <TrashIcon size={11} />
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </section>
     </div>
   )

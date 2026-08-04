@@ -60,6 +60,14 @@ export const RepeatIcon = ({ size = 12 }) => (
   </svg>
 )
 
+// Drag handle. Two bars rather than the usual six dots — dots need a fill and
+// everything else here is drawn with the shared stroke.
+export const GripIcon = ({ size = 14 }) => (
+  <svg {...base(size)} aria-hidden="true">
+    <path d="M5 9.5h14M5 14.5h14" />
+  </svg>
+)
+
 export const TrashIcon = ({ size = 12 }) => (
   <svg {...base(size)} aria-hidden="true">
     <path d="M4 6.5h16M9.5 6.5V4.5h5v2M6.5 6.5 7.5 20h9l1-13.5" />

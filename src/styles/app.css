@@ -2715,3 +2715,168 @@
   0%, 100% { opacity: 0.35; transform: scale(0.85); }
   50% { opacity: 1; transform: scale(1.15); }
 }
+
+/* ---------- Brain dump (bottom of Today) ----------
+   Quieter than the anchor cards above it by design: this is the holding pen,
+   not the plan. Rows rest flat and only open when tapped. */
+
+.today-dump {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.today-dump-help {
+  margin: -4px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.today-dump-add {
+  display: flex;
+  gap: 8px;
+}
+
+.today-dump-add input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--line);
+  background: var(--page);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--fs-body);
+}
+
+.today-dump-add input:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+
+.today-dump-add .btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.today-dump-empty {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.today-dump-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.today-dump-item {
+  border: 1px solid var(--line);
+  border-radius: var(--r-btn);
+  background: var(--page);
+  transition: border-color 160ms ease;
+}
+
+.today-dump-item.open {
+  border-color: var(--line-strong);
+}
+
+/* The row being dragged: lifted off the page, and it must not animate its own
+   position or it would lag a finger that's already moved on. */
+.today-dump-item.lifted {
+  border-color: var(--line-strong);
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  transition: none;
+}
+
+.today-dump-main {
+  display: flex;
+  align-items: stretch;
+}
+
+.today-dump-handle {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  padding: 0 4px 0 9px;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  /* The page must not scroll out from under a drag in progress. */
+  touch-action: none;
+  cursor: grab;
+}
+
+.today-dump-item.lifted .today-dump-handle {
+  cursor: grabbing;
+  color: var(--ink);
+}
+
+.today-dump-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px 10px 6px;
+  background: none;
+  border: none;
+  text-align: left;
+}
+
+.today-dump-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.today-dump-tag {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  background: var(--pill);
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.today-dump-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.today-dump-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.today-dump-clear {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: var(--r-pill);
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.today-dump-notice {
+  font-size: 11.5px;
+}
