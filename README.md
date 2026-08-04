@@ -1,4 +1,7 @@
 # Anchor
+Anchor, is an ADHD/anxiety-focused executive-function co-pilot that helps people regulate focus, motivation, and emotional state while studying or working.
+
+The app is designed for people with ADHD, anxiety, depression, or similar focus and motivation struggles, especially when breakdowns like doomscrolling, avoidance, emotional overwhelm, and task paralysis get in the way.
 
 Steady the day. Turn scattered obligations into three small, startable anchors.
 Pull all tasks and events from google calendar and gmail.
